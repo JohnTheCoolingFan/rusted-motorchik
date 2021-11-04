@@ -70,6 +70,7 @@ struct InfoJson {
 }
 
 #[command]
+#[aliases(modstat, ms)]
 async fn mods_statistics(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     for mod_name in args.quoted().trimmed().iter::<String>() {
         process_mod(&ctx, &msg, mod_name?).await?;
