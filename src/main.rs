@@ -60,6 +60,51 @@ async fn advanced_test(ctx: &Context, msg: &Message, mut args: Args) -> CommandR
 #[commands(test, advanced_test)]
 struct TestCommands;
 
+#[command]
+async fn spin(ctx: &Context, msg: &Message) -> CommandResult {
+    msg.channel_id.say(&ctx.http, "https://www.youtube.com/watch?v=PGNiXGX2nLU").await?;
+    Ok(())
+}
+
+#[command]
+#[aliases(XcQ)]
+async fn rickroll(ctx: &Context, msg: &Message) -> CommandResult {
+    msg.channel_id.say(&ctx.http, "<https://www.youtube.com/watch?v=dQw4w9WgXcQ>\n<:kappa_jtcf:546748910765604875>").await?;
+    Ok(())
+}
+
+#[command]
+#[aliases(UDOD_COMMUNIST, UDOD, udod, УДОД_КОММУНИСТ, удод_коммунист, УДОД, удод)]
+async fn udod_communist(ctx: &Context, msg: &Message) -> CommandResult {
+    msg.channel_id.say(&ctx.http, "https://youtu.be/OhqSg660cP8").await?;
+    Ok(())
+}
+
+#[command]
+#[aliases(UDOD_COMMUNIST_2, UDOD2, udod2, УДОД_КОММУНИСТ_2, удод_коммунист_2, УДОД2, удод2)]
+async fn udod_communist_2(ctx: &Context, msg: &Message) -> CommandResult {
+    msg.channel_id.say(&ctx.http, "https://youtu.be/BgF5HcnNN-Q").await?;
+    Ok(())
+}
+
+#[command]
+async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
+    let mut pong = msg.channel_id.say(&ctx.http, "pong!").await?;
+    let time_diff = pong.timestamp - msg.timestamp;
+    let time_diff_ms: f64 = {
+        match time_diff.num_microseconds() {
+            Some(us) => (us as f64) / 1000.0,
+            _ => time_diff.num_milliseconds() as f64
+        }
+    };
+    pong.edit(&ctx.http, |m| m.content(format!("pong!\nTime delta is {} ms", time_diff_ms))).await?;
+    Ok(())
+}
+
+#[group]
+#[commands(spin, rickroll, udod_communist, udod_communist_2, ping)]
+struct FunCommands;
+
 #[tokio::main]
 async fn main() {
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
@@ -88,7 +133,8 @@ async fn main() {
             .prefix("$!")
             .delimiters(vec![" ", ", ", ","])
             .owners(owners))
-        .group(&TESTCOMMANDS_GROUP);
+        .group(&TESTCOMMANDS_GROUP)
+        .group(&FUNCOMMANDS_GROUP);
 
     let mut client = Client::builder(&token)
         .event_handler(Handler)
