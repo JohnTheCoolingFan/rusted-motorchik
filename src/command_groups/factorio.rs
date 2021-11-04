@@ -10,6 +10,8 @@ use reqwest::{self, StatusCode};
 use serde::Deserialize;
 use semver::Version;
 
+// TODO: Re-use client session
+
 static MOD_LIST: [&str; 5] = ["artillery-spidertron", "PlaceableOffGrid", "NoArtilleryMapReveal", "RandomFactorioThings", "PlutoniumEnergy"];
 
 static MODPORTAL_URL: &str = "https://mods.factorio.com";
