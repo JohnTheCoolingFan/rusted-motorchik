@@ -73,13 +73,22 @@ struct InfoJson {
 #[aliases(modstat, ms)]
 async fn mods_statistics(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     for mod_name in args.quoted().trimmed().iter::<String>() {
-        process_mod(&ctx, &msg, mod_name?).await?;
+        process_mod(&ctx, &msg, &mod_name?).await?;
     }
     Ok(())
 }
 
-async fn process_mod(ctx: &Context, msg: &Message, mod_name: String) -> CommandResult {
-    let mod_data = get_mod_info(&ctx, &mod_name).await;
+#[command]
+#[aliases(ml)]
+async fn modlist(ctx: &Context, msg: &Message) -> CommandResult {
+    for mod_name in MOD_LIST {
+        process_mod(&ctx, &msg, &mod_name).await?;
+    }
+    Ok(())
+}
+
+async fn process_mod(ctx: &Context, msg: &Message, mod_name: &str) -> CommandResult {
+    let mod_data = get_mod_info(&ctx, mod_name).await;
     msg.channel_id.send_message(&ctx.http, |m| m.embed(|e| {
         match mod_data {
             Ok(data) => construct_mod_embed(e, data),
@@ -182,7 +191,7 @@ async fn find_mod(ctx: &Context, mod_name: &str) -> Result<String, Box<dyn Error
 }
 
 #[group]
-#[commands(mods_statistics)]
+#[commands(mods_statistics, modlist)]
 struct Factorio;
 
 #[derive(Error, Debug)]
