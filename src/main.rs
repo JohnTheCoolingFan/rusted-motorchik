@@ -8,9 +8,8 @@ use serenity::client::bridge::gateway::GatewayIntents;
 use serenity::async_trait;
 use serenity::client::{Client, Context, EventHandler};
 use serenity::model::{channel::Message, gateway::Ready};
-use serenity::framework::standard::macros::{command, group};
-use serenity::framework::standard::{StandardFramework, CommandResult, Args};
-use serenity::utils::{content_safe, ContentSafeOptions};
+use serenity::framework::standard::StandardFramework;
+use serenity::utils::ContentSafeOptions;
 use serenity::http::Http;
 
 pub fn content_safe_settings(msg: &Message) -> ContentSafeOptions {
