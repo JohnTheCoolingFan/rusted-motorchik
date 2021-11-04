@@ -58,7 +58,8 @@ async fn main() {
             .delimiters(vec![" ", ", ", ","])
             .owners(owners))
         .group(&TESTCOMMANDS_GROUP)
-        .group(&FUNCOMMANDS_GROUP);
+        .group(&FUNCOMMANDS_GROUP)
+        .group(&MISCELLANEOUS_GROUP);
 
     let mut client = Client::builder(&token)
         .event_handler(Handler)
