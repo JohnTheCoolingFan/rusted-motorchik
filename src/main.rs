@@ -55,7 +55,7 @@ async fn main() {
             .with_whitespace(true)
             .on_mention(Some(bot_id))
             .prefix("$!")
-            .delimiters(vec![" ", ", ", ","])
+            .delimiters(vec![", ", ",", " "])
             .owners(owners))
         .group(&TESTCOMMANDS_GROUP)
         .group(&FUNCOMMANDS_GROUP)
