@@ -1,3 +1,7 @@
+mod command_groups;
+
+use command_groups::*;
+
 use std::env;
 use std::collections::HashSet;
 use serenity::client::bridge::gateway::GatewayIntents;
@@ -24,86 +28,6 @@ impl EventHandler for Handler {
         println!("Connected as {}", ready.user.name);
     }
 }
-
-#[command]
-async fn test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let settings = content_safe_settings(msg);
-    let content = content_safe(&ctx.cache, &args.rest(), &settings).await;
-    msg.channel_id.say(&ctx.http, &content).await?;
-    Ok(())
-}
-
-#[command]
-#[aliases(advtest, atest)]
-async fn advanced_test(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let settings = content_safe_settings(msg);
-    let arg_cnt = args.len();
-    let content = content_safe(&ctx.cache, {
-        let mut joined = args
-        .iter::<String>()
-        .quoted()
-        .trimmed()
-        .filter_map(|s| match s {
-            Ok(rs) => Some(rs),
-            Err(_) => None
-        })
-        .fold(String::new(), |s1, s2| s1 + &s2 + ", ");
-        joined.pop();
-        joined.pop();
-        joined
-    }, &settings).await;
-    msg.channel_id.say(&ctx.http, format!("Passed {} arguments: {}", arg_cnt, content)).await?;
-    Ok(())
-}
-
-#[group]
-#[commands(test, advanced_test)]
-struct TestCommands;
-
-#[command]
-async fn spin(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(&ctx.http, "https://www.youtube.com/watch?v=PGNiXGX2nLU").await?;
-    Ok(())
-}
-
-#[command]
-#[aliases(XcQ)]
-async fn rickroll(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(&ctx.http, "<https://www.youtube.com/watch?v=dQw4w9WgXcQ>\n<:kappa_jtcf:546748910765604875>").await?;
-    Ok(())
-}
-
-#[command]
-#[aliases(UDOD_COMMUNIST, UDOD, udod, УДОД_КОММУНИСТ, удод_коммунист, УДОД, удод)]
-async fn udod_communist(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(&ctx.http, "https://youtu.be/OhqSg660cP8").await?;
-    Ok(())
-}
-
-#[command]
-#[aliases(UDOD_COMMUNIST_2, UDOD2, udod2, УДОД_КОММУНИСТ_2, удод_коммунист_2, УДОД2, удод2)]
-async fn udod_communist_2(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(&ctx.http, "https://youtu.be/BgF5HcnNN-Q").await?;
-    Ok(())
-}
-
-#[command]
-async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
-    let mut pong = msg.channel_id.say(&ctx.http, "pong!").await?;
-    let time_diff = pong.timestamp - msg.timestamp;
-    let time_diff_ms: f64 = {
-        match time_diff.num_microseconds() {
-            Some(us) => (us as f64) / 1000.0,
-            _ => time_diff.num_milliseconds() as f64
-        }
-    };
-    pong.edit(&ctx.http, |m| m.content(format!("pong!\nTime delta is {} ms", time_diff_ms))).await?;
-    Ok(())
-}
-
-#[group]
-#[commands(spin, rickroll, udod_communist, udod_communist_2, ping)]
-struct FunCommands;
 
 #[tokio::main]
 async fn main() {
