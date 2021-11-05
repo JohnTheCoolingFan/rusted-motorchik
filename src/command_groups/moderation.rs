@@ -19,6 +19,8 @@ async fn clearchat(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
     Ok(())
 }
 
+// Other commands require InfoChannels functionality to function as intended.
+
 #[group]
 #[commands(clearchat)]
 struct Moderation;
