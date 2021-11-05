@@ -26,6 +26,18 @@ impl EventHandler for Handler {
     async fn ready(&self, _: Context, ready: Ready) {
         println!("Connected as {}", ready.user.name);
     }
+
+    async fn message(&self, ctx: Context, msg: Message) {
+        if msg.is_private() && !msg.is_own(&ctx.cache).await {
+            if let Ok(appinfo) = ctx.http.get_current_application_info().await {
+                let owner = appinfo.owner;
+                match owner.dm(&ctx.http, |m| m.content(format!("I have received a message from {}:\n{}", msg.author.tag(), msg.content))).await {
+                    Err(why) => println!("Failed to redirect message: {}", why),
+                    _ => {}
+                }
+            }
+        }
+    }
 }
 
 #[tokio::main]
