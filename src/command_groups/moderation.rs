@@ -7,6 +7,7 @@ use std::time::Duration;
 
 #[command]
 #[aliases(clear, cl)]
+#[required_permissions(MANAGE_MESSAGES)]
 async fn clearchat(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let count = args.single::<u64>()?;
     msg.delete(&ctx.http).await?;
