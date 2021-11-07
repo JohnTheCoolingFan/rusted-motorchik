@@ -4,8 +4,6 @@ use serenity::model::channel::Message;
 use serenity::framework::standard::macros::{command, group};
 use serenity::framework::standard::CommandResult;
 use chrono::offset::Utc;
-use sys_info;
-use psutil;
 
 static GITHUB_URL: &str = "https://github.com/JohnTheCoolingFan/rusted-motorchik";
 static GITLAB_URL: &str = "Sorry, not available yet";

@@ -2,7 +2,6 @@ use serenity::client::Context;
 use serenity::model::channel::Message;
 use serenity::framework::standard::macros::{command, group};
 use serenity::framework::standard::{CommandResult, Args};
-use tokio;
 use std::time::Duration;
 
 #[command]

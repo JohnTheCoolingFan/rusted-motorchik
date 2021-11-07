@@ -1,4 +1,5 @@
 mod command_groups;
+mod guild_config;
 
 use command_groups::*;
 
@@ -31,9 +32,8 @@ impl EventHandler for Handler {
         if msg.is_private() && !msg.is_own(&ctx.cache).await {
             if let Ok(appinfo) = ctx.http.get_current_application_info().await {
                 let owner = appinfo.owner;
-                match owner.dm(&ctx.http, |m| m.content(format!("I have received a message from {}:\n{}", msg.author.tag(), msg.content))).await {
-                    Err(why) => println!("Failed to redirect message: {}", why),
-                    _ => {}
+                if let Err(why) = owner.dm(&ctx.http, |m| m.content(format!("I have received a message from {}:\n{}", msg.author.tag(), msg.content))).await {
+                    println!("Failed to redirect message: {}", why)
                 }
             }
         }

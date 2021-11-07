@@ -73,7 +73,7 @@ struct InfoJson {
 #[aliases(modstat, ms)]
 async fn mods_statistics(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     for mod_name in args.quoted().trimmed().iter::<String>() {
-        process_mod(&ctx, &msg, &mod_name?).await?;
+        process_mod(ctx, msg, &mod_name?).await?;
     }
     Ok(())
 }
@@ -82,13 +82,13 @@ async fn mods_statistics(ctx: &Context, msg: &Message, mut args: Args) -> Comman
 #[aliases(ml)]
 async fn modlist(ctx: &Context, msg: &Message) -> CommandResult {
     for mod_name in MOD_LIST {
-        process_mod(&ctx, &msg, &mod_name).await?;
+        process_mod(ctx, msg, mod_name).await?;
     }
     Ok(())
 }
 
 async fn process_mod(ctx: &Context, msg: &Message, mod_name: &str) -> CommandResult {
-    let mod_data = get_mod_info(&ctx, mod_name).await;
+    let mod_data = get_mod_info(ctx, mod_name).await;
     msg.channel_id.send_message(&ctx.http, |m| m.embed(|e| {
         match mod_data {
             Ok(data) => construct_mod_embed(e, data),
@@ -100,7 +100,7 @@ async fn process_mod(ctx: &Context, msg: &Message, mod_name: &str) -> CommandRes
     Ok(())
 }
 
-fn construct_mod_embed<'a>(e: &'a mut CreateEmbed, data: ModData) -> &'a mut CreateEmbed {
+fn construct_mod_embed(e: &mut CreateEmbed, data: ModData) -> &mut CreateEmbed {
     e.title(data.title)
         .description(data.description)
         .url(data.url)
@@ -149,7 +149,7 @@ async fn parse_mod_data(api_response: reqwest::Response, mod_name: &str) -> Resu
     let mut result = ModData::new(
         mod_info.title,
         mod_info.summary,
-        format!("{}/mod/{}", MODPORTAL_URL, mod_name).into(),
+        format!("{}/mod/{}", MODPORTAL_URL, mod_name),
         SUCCESS_EMBED_COLOR,
         mod_info.downloads_count,
         mod_info.owner,
