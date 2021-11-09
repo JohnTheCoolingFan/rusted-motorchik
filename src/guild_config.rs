@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use std::hash::Hash;
 use std::fs::File;
 use std::error::Error;
@@ -42,12 +43,15 @@ impl<'a, T: Send + Sync, K: Send + Sync + Eq + Hash> GuildConfigReadLock<'a, T, 
 
 impl GuildConfigManager {
     pub fn new(path: impl Into<PathBuf>) -> Self {
-        Self{gc_cache: RwLock::new(HashMap::new()), config_path: path.into()}
+        let path = path.into();
+        if !path.exists() {
+            std::fs::create_dir(&path).unwrap();
+        }
+        Self{gc_cache: RwLock::new(HashMap::new()), config_path: path}
     }
 
     pub async fn get_guild_config(&self, guild: &Guild) -> Result<GuildConfigReadLock<'_, GuildConfig, GuildId>, Box<dyn Error + Send + Sync>> {
-        let gc_cache = self.gc_cache.read().await;
-        if !gc_cache.contains_key(&guild.id) {
+        if !self.is_cached(guild.id).await {
             let mut gc_cache = self.gc_cache.write().await;
             if let Ok(gc) = GuildConfig::read(guild.id, &self.config_path) {
                 gc_cache.insert(guild.id, RwLock::new(gc));
@@ -55,7 +59,13 @@ impl GuildConfigManager {
                 gc_cache.insert(guild.id, RwLock::new(GuildConfig::new(guild, &self.config_path)?));
             }
         }
+        let gc_cache = self.gc_cache.read().await;
         Ok(GuildConfigReadLock(guild.id, gc_cache))
+    }
+
+    async fn is_cached(&self, guild_id: GuildId) -> bool {
+        let gc_cache = self.gc_cache.read().await;
+        gc_cache.contains_key(&guild_id)
     }
 }
 
@@ -136,15 +146,12 @@ impl GuildConfig {
 
     /// Get command filter
     pub async fn get_command_filter(&self, command_name: &str) -> GuildConfigReadLock<'_, CommandFilter, String> {
-        let cf_cache = self.cf_cache.read().await;
-        if cf_cache.contains_key(command_name) {
-            GuildConfigReadLock(command_name.into(), cf_cache)
-        } else {
+        if !self.is_cached(command_name).await {
             let mut cf_cache = self.cf_cache.write().await;
             cf_cache.insert(command_name.into(), RwLock::new(CommandFilter::default(self.guild_id, command_name.into())));
-            let cf_cache = self.cf_cache.read().await;
-            GuildConfigReadLock(command_name.into(), cf_cache)
         }
+        let cf_cache = self.cf_cache.read().await;
+        GuildConfigReadLock(command_name.into(), cf_cache)
     }
 
     /// Edit this GuildConfig
@@ -176,39 +183,51 @@ impl GuildConfig {
     pub async fn edit_command_filter<F: FnOnce(&mut EditCommandFilter) -> &mut EditCommandFilter>(&mut self, command_name: &str, f: F) -> Result<(), Box<dyn Error + Send + Sync>> {
         let mut cf_edit = EditCommandFilter::default();
         f(&mut cf_edit);
-        if cf_edit.filter_type.is_some() && cf_edit.channels.is_some() {
-            let command_filter_lock = self.get_command_filter(command_name).await;
-            let mut command_filter = command_filter_lock.get().write().await;
-            if let Some(filter_type) = cf_edit.filter_type {
-                command_filter.data.filter_type = filter_type
+        if cf_edit.filter_type.is_some() || cf_edit.channels.is_some() {
+            {
+                let command_filter_lock = self.get_command_filter(command_name).await;
+                let mut command_filter = command_filter_lock.get().write().await;
+                if let Some(filter_type) = cf_edit.filter_type {
+                    command_filter.data.filter_type = filter_type
+                }
+                if let Some(channels) = cf_edit.channels {
+                    command_filter.data.channels = channels
+                }
             }
-            if let Some(channels) = cf_edit.channels {
-                command_filter.data.channels = channels
-            }
+            self.sync_cache().await;
             self.write()
         } else {
             Ok(())
         }
     }
 
+    async fn is_cached(&self, command_name: &str) -> bool {
+        let cf_cache = self.cf_cache.read().await;
+        cf_cache.contains_key(command_name)
+    }
 
     /// Create new instance of GuildConfig
     fn new(guild: &Guild, config_path: &Path) -> Result<Self, Box<dyn Error + Send + Sync>> {
         let guild_config_data = GuildConfigData::new(guild.system_channel_id.unwrap_or(ChannelId(0)));
         let path = config_path.join(format!("guild_{}.json", guild.id));
-        let result = Self{guild_id:guild.id, config_path:path, data:guild_config_data, cf_cache:RwLock::new(HashMap::new())};
+        let mut result = Self{guild_id:guild.id, config_path:path, data:guild_config_data, cf_cache:RwLock::new(HashMap::new())};
         result.write()?;
         Ok(result)
     }
 
     /// Write GuildConfig to disk
-    fn write(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
-        let file = match File::open(&self.config_path) {
-            Ok(f) => f,
-            Err(_) => File::create(&self.config_path)?
-        };
+    fn write(&mut self) -> Result<(), Box<dyn Error + Send + Sync>> {
+        let file = File::create(&self.config_path)?;
         serde_json::to_writer(file, &self.data)?;
         Ok(())
+    }
+
+    async fn sync_cache(&mut self) {
+        let cf_cache = self.cf_cache.read().await;
+        for rwl_cached_cf in cf_cache.deref() {
+            let cached_cf = rwl_cached_cf.1.read().await;
+            self.data.command_filters.insert(rwl_cached_cf.0.clone(), cached_cf.data.clone());
+        }
     }
 
     /// Read GuildConfig data from file and create Self
@@ -326,7 +345,7 @@ impl CommandFilter {
     }
 }
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Default, Deserialize, Serialize, Clone)]
 struct CommandFilterData {
     #[serde(rename = "type")]
     filter_type: CommandDisability,
