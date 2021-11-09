@@ -47,14 +47,15 @@ impl GuildConfigManager {
 
     pub async fn get_guild_config(&self, guild: &Guild) -> Result<GuildConfigReadLock<'_, GuildConfig, GuildId>, Box<dyn Error + Send + Sync>> {
         let gc_cache = self.gc_cache.read().await;
-        if gc_cache.contains_key(&guild.id) {
-            Ok(GuildConfigReadLock(guild.id, gc_cache))
-        } else {
+        if !gc_cache.contains_key(&guild.id) {
             let mut gc_cache = self.gc_cache.write().await;
-            gc_cache.insert(guild.id, RwLock::new(GuildConfig::new(guild, &self.config_path)?));
-            let gc_cache = self.gc_cache.read().await;
-            Ok(GuildConfigReadLock(guild.id, gc_cache))
+            if let Ok(gc) = GuildConfig::read(guild.id, &self.config_path) {
+                gc_cache.insert(guild.id, RwLock::new(gc));
+            } else  {
+                gc_cache.insert(guild.id, RwLock::new(GuildConfig::new(guild, &self.config_path)?));
+            }
         }
+        Ok(GuildConfigReadLock(guild.id, gc_cache))
     }
 }
 
