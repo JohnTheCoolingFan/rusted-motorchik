@@ -12,6 +12,7 @@ use serenity::model::{channel::Message, gateway::Ready};
 use serenity::framework::standard::StandardFramework;
 use serenity::utils::ContentSafeOptions;
 use serenity::http::Http;
+use guild_config::{GuildConfigManagerKey, GuildConfigManager};
 
 pub fn content_safe_settings(msg: &Message) -> ContentSafeOptions {
     match &msg.guild_id {
@@ -80,6 +81,9 @@ async fn main() {
         .intents(GatewayIntents::all())
         .await
         .expect("Err creating client");
+
+    // TODO: get path from environment variable
+    client.data.write().await.insert::<GuildConfigManagerKey>(GuildConfigManager::new("guilds"));
 
     if let Err(why) = client.start().await {
         println!("Client error: {:?}", why);
