@@ -133,7 +133,9 @@ fn construct_mod_embed(e: &mut CreateEmbed, data: ModData) -> &mut CreateEmbed {
 }
 
 async fn get_mod_info(ctx: &Context, mod_name: &str) -> Result<ModData, Box<dyn Error + Send + Sync>> {
-    let api_response = reqwest::get(format!("{}/api/mods/{}", MODPORTAL_URL, mod_name)).await?;
+    let client_data = ctx.data.read().await;
+    let reqwest_client = client_data.get::<FactorioReqwestClient>().unwrap();
+    let api_response = reqwest_client.get(format!("{}/api/mods/{}", MODPORTAL_URL, mod_name)).send().await?;
     if api_response.status() == StatusCode::OK {
         parse_mod_data(api_response, mod_name).await
     } else {
@@ -174,7 +176,9 @@ async fn parse_mod_data(api_response: reqwest::Response, mod_name: &str) -> Resu
 }
 
 async fn find_mod(ctx: &Context, mod_name: &str) -> Result<String, Box<dyn Error + Send + Sync>> {
-    let search_response = reqwest::get(format!("{}/query/{}", MODPORTAL_URL, mod_name)).await?;
+    let client_data = ctx.data.read().await;
+    let reqwest_client = client_data.get::<FactorioReqwestClient>().unwrap();
+    let search_response = reqwest_client.get(format!("{}/query/{}", MODPORTAL_URL, mod_name)).send().await?;
     if search_response.status() == StatusCode::OK {
         let selector = Selector::parse("h2.mb0").unwrap();
         let document = Html::parse_document(&search_response.text().await?);
