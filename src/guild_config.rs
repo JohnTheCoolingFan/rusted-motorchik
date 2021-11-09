@@ -56,10 +56,6 @@ impl GuildConfigManager {
             Ok(GuildConfigReadLock(guild.id, gc_cache))
         }
     }
-
-    //pub fn get_command_filter(&self, guild: GuildId, name: String) -> Option<&CommandFilter> {
-        //self.cf_cache.get(&(guild, name))
-    //}
 }
 
 #[derive(Default)]
