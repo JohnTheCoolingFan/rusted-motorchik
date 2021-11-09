@@ -83,7 +83,11 @@ async fn main() {
         .expect("Err creating client");
 
     // TODO: get path from environment variable
-    client.data.write().await.insert::<GuildConfigManagerKey>(GuildConfigManager::new("guilds"));
+    {
+        let mut client_data = client.data.write().await;
+        client_data.insert::<GuildConfigManagerKey>(GuildConfigManager::new("guilds"));
+        client_data.insert::<FactorioReqwestClient>(reqwest::Client::new());
+    }
 
     if let Err(why) = client.start().await {
         println!("Client error: {:?}", why);

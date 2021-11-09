@@ -1,7 +1,7 @@
 use std::error::Error;
 use thiserror::Error;
-use serenity::client::Context;
-use serenity::model::channel::Message;
+use serenity::prelude::*;
+use serenity::model::prelude::*;
 use serenity::builder::{Timestamp, CreateEmbed};
 use serenity::framework::standard::macros::{command, group};
 use serenity::framework::standard::{CommandResult, Args};
@@ -19,6 +19,12 @@ static LAUNCHER_URL: &str = "https://factorio-launcher-mods.storage.googleapis.c
 
 static FAILED_EMBED_COLOR: (u8, u8, u8) = (255, 10, 10);
 static SUCCESS_EMBED_COLOR: (u8, u8, u8) = (47, 137, 197);
+
+pub struct FactorioReqwestClient;
+
+impl TypeMapKey for FactorioReqwestClient {
+    type Value = reqwest::Client;
+}
 
 struct ModData {
     title: String,
