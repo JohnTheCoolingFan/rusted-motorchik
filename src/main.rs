@@ -73,7 +73,8 @@ async fn main() {
         .group(&MISCELLANEOUS_GROUP)
         .group(&FACTORIO_GROUP)
         .group(&MODERATION_GROUP)
-        .group(&SERVICETOOLS_GROUP);
+        .group(&SERVICETOOLS_GROUP)
+        .group(&SERVERCONFIGURATION_GROUP);
 
     let mut client = Client::builder(&token)
         .event_handler(Handler)
