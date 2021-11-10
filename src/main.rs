@@ -61,7 +61,7 @@ async fn my_help(ctx: &Context, msg: &Message, args: Args, hopt: &'static HelpOp
 #[hook]
 async fn after(_ctx: &Context, _msg: &Message, command_name: &str, command_result: CommandResult) {
     if let Err(why) = command_result {
-        println!("Command '{}' returned error {:?}", command_name, why);
+        println!("Command '{}' returned error {}", command_name, why);
     }
 }
 
