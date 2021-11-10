@@ -5,11 +5,13 @@ use command_groups::*;
 
 use std::env;
 use std::collections::HashSet;
+use serenity::model::prelude::*;
 use serenity::client::bridge::gateway::GatewayIntents;
 use serenity::async_trait;
 use serenity::client::{Client, Context, EventHandler};
 use serenity::model::{channel::Message, gateway::Ready};
-use serenity::framework::standard::StandardFramework;
+use serenity::framework::standard::{StandardFramework, CommandResult, Args, CommandGroup, HelpOptions};
+use serenity::framework::standard::{macros::{help, hook}, help_commands};
 use serenity::utils::ContentSafeOptions;
 use serenity::http::Http;
 use guild_config::{GuildConfigManagerKey, GuildConfigManager};
@@ -41,6 +43,28 @@ impl EventHandler for Handler {
     }
 }
 
+#[help]
+#[command_not_found_text = "Could not find command: {}"]
+#[max_levenshtein_distance(3)]
+#[lacking_role = "hide"]
+#[lacking_ownership = "hide"]
+#[lacking_permissions = "hide"]
+#[lacking_conditions = "strike"]
+async fn my_help(ctx: &Context, msg: &Message, args: Args, hopt: &'static HelpOptions, groups: &[&'static CommandGroup], owners: HashSet<UserId>) -> CommandResult {
+    let _ = help_commands::with_embeds(ctx, msg, args, hopt, groups, owners).await;
+    Ok(())
+}
+
+// TODO: hook before to check command filters
+
+// TODO: send the error in a message and print if sending in message failed
+#[hook]
+async fn after(_ctx: &Context, _msg: &Message, command_name: &str, command_result: CommandResult) {
+    if let Err(why) = command_result {
+        println!("Command '{}' returned error {:?}", command_name, why);
+    }
+}
+
 #[tokio::main]
 async fn main() {
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
@@ -68,6 +92,8 @@ async fn main() {
             .prefix("$!")
             .delimiters(vec![", ", ","])
             .owners(owners))
+        .after(after)
+        .help(&MY_HELP)
         .group(&TESTCOMMANDS_GROUP)
         .group(&FUNCOMMANDS_GROUP)
         .group(&MISCELLANEOUS_GROUP)
