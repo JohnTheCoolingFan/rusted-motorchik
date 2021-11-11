@@ -2,7 +2,7 @@ use serenity::prelude::*;
 use serenity::model::prelude::*;
 use serenity::framework::standard::macros::{command, group};
 use serenity::framework::standard::{CommandResult, Args};
-use crate::guild_config::{GuildConfigManagerKey, CommandDisability};
+use crate::guild_config::{GuildConfigManagerKey, CommandDisability, InfoChannelType};
 
 /// Enables specified command and disables all filtering
 #[command("enable")]
@@ -90,8 +90,56 @@ async fn blacklist_command(ctx: &Context, msg: &Message, mut args: Args) -> Comm
 #[commands(enable_command, disable_command, whitelist_command, blacklist_command)]
 struct ConfigCommands;
 
+/// Enables specified info channel
+#[command("enable")]
+#[usage("(welcome,log,mod-list)")]
+async fn enable_ic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    args.trimmed().quoted();
+    let ic_type = args.single::<InfoChannelType>()?;
+    let data = ctx.data.read().await;
+    let gc_manager = data.get::<GuildConfigManagerKey>().unwrap();
+    let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
+    let guild_config_lock = gc_manager.get_guild_config(&guild).await?;
+    let mut guild_config = guild_config_lock.get().write().await;
+    guild_config.edit(|e| {
+        e.info_channel(ic_type, |i| {
+            i.state(true)
+        })
+    }).await?;
+    msg.channel_id.say(&ctx.http, format!("Successfully enabled `{}` info channel.", ic_type.as_ref())).await?;
+    Ok(())
+}
+
+/// Enables specified info channel
+#[command("disable")]
+#[usage("(welcome,log,mod-list)")]
+async fn disable_ic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    args.trimmed().quoted();
+    let ic_type = args.single::<InfoChannelType>()?;
+    let data = ctx.data.read().await;
+    let gc_manager = data.get::<GuildConfigManagerKey>().unwrap();
+    let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
+    let guild_config_lock = gc_manager.get_guild_config(&guild).await?;
+    let mut guild_config = guild_config_lock.get().write().await;
+    guild_config.edit(|e| {
+        e.info_channel(ic_type, |i| {
+            i.state(false)
+        })
+    }).await?;
+    msg.channel_id.say(&ctx.http, format!("Successfully disabled `{}` info channel.", ic_type.as_ref())).await?;
+    Ok(())
+}
+
+/// Control Info Channels settings
+#[group]
+#[prefix("info_channel")]
+#[only_in(guilds)]
+#[commands(enable_ic, disable_ic)]
+struct InfoChannelsCommands;
+
+/// Guild-specific bot settings
 #[group]
 #[required_permissions(ADMINISTRATOR)]
-#[sub_groups(ConfigCommands)]
+#[sub_groups(ConfigCommands, InfoChannelsCommands)]
 #[only_in(guilds)]
 struct ServerConfiguration;
