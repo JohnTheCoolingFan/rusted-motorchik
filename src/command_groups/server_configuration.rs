@@ -46,14 +46,15 @@ async fn whitelist_command(ctx: &Context, msg: &Message, mut args: Args) -> Comm
     let guild_config_lock = data.get::<GuildConfigManagerKey>().unwrap().get_guild_config(&guild).await?;
     let mut guild_config = guild_config_lock.get().write().await;
     let command_name = args.single::<String>()?;
-    let arg_channels_iter = args.iter::<ChannelId>();
-    let mut filter_list: Vec<ChannelId> = Vec::with_capacity(arg_channels_iter.size_hint().0);
-    for channel in arg_channels_iter {
-        filter_list.push(channel?);
+    let mut arg_iter = args.iter::<ChannelId>();
+    let filter_list = arg_iter.quoted().trimmed();
+    let mut channels = Vec::with_capacity(filter_list.size_hint().0);
+    for channel in filter_list {
+        channels.push(channel?);
     }
-    let channel_cnt = filter_list.len();
+    let channel_cnt = channels.len();
     guild_config.edit_command_filter(&command_name, |e| {
-        e.filter_type(CommandDisability::Whitelisted).channels(filter_list)
+        e.filter_type(CommandDisability::Whitelisted).channels(channels)
     }).await?;
     msg.channel_id.say(&ctx.http, format!("Set filtering for command `{}` to whitelist. {} channels total", command_name, channel_cnt)).await?;
     Ok(())
@@ -69,14 +70,15 @@ async fn blacklist_command(ctx: &Context, msg: &Message, mut args: Args) -> Comm
     let guild_config_lock = data.get::<GuildConfigManagerKey>().unwrap().get_guild_config(&guild).await?;
     let mut guild_config = guild_config_lock.get().write().await;
     let command_name = args.single::<String>()?;
-    let arg_channels_iter = args.iter::<ChannelId>();
-    let mut filter_list: Vec<ChannelId> = Vec::with_capacity(arg_channels_iter.size_hint().0);
-    for channel in arg_channels_iter {
-        filter_list.push(channel?);
+    let mut arg_iter = args.iter::<ChannelId>();
+    let filter_list = arg_iter.quoted().trimmed();
+    let mut channels = Vec::with_capacity(filter_list.size_hint().0);
+    for channel in filter_list {
+        channels.push(channel?);
     }
-    let channel_cnt = filter_list.len();
+    let channel_cnt = channels.len();
     guild_config.edit_command_filter(&command_name, |e| {
-        e.filter_type(CommandDisability::Blacklisted).channels(filter_list)
+        e.filter_type(CommandDisability::Blacklisted).channels(channels)
     }).await?;
     msg.channel_id.say(&ctx.http, format!("Set filtering for command `{}` to blacklist. {} channels total", command_name, channel_cnt)).await?;
     Ok(())
