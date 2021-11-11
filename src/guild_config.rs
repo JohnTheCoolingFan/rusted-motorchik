@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::ops::Deref;
 use std::hash::Hash;
 use std::fs::File;
@@ -12,6 +13,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum_macros::{EnumString, AsRefStr, EnumIter};
 use strum::IntoEnumIterator;
 use tokio::sync::RwLockReadGuard;
+use serenity::framework::standard::ArgError;
 
 pub struct GuildConfigManagerKey;
 
@@ -294,6 +296,14 @@ impl EditCommandFilter {
     pub fn channels(&mut self, channels: Vec<ChannelId>) -> &mut Self {
         self.channels = Some(channels);
         self
+    }
+    
+    pub fn channels_from_results_iter<I: Iterator<Item = Result<ChannelId, ArgError<<ChannelId as FromStr>::Err>>>>(channels_it: I) -> Result<Vec<ChannelId>, ArgError<<ChannelId as FromStr>::Err>> {
+        let mut channels = Vec::with_capacity(channels_it.size_hint().0);
+        for channel in channels_it {
+            channels.push(channel?);
+        };
+        Ok(channels)
     }
 
     /// Shorthand for setting filter_type to CommandDisability::None

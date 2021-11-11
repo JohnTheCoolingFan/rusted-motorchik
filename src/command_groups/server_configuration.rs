@@ -2,7 +2,7 @@ use serenity::prelude::*;
 use serenity::model::prelude::*;
 use serenity::framework::standard::macros::{command, group};
 use serenity::framework::standard::{CommandResult, Args};
-use crate::guild_config::{GuildConfigManagerKey, CommandDisability, InfoChannelType};
+use crate::guild_config::{GuildConfigManagerKey, CommandDisability, InfoChannelType, EditCommandFilter};
 
 /// Enables specified command and disables all filtering
 #[command("enable")]
@@ -48,10 +48,7 @@ async fn whitelist_command(ctx: &Context, msg: &Message, mut args: Args) -> Comm
     let command_name = args.single::<String>()?;
     let mut arg_iter = args.iter::<ChannelId>();
     let filter_list = arg_iter.quoted().trimmed();
-    let mut channels = Vec::with_capacity(filter_list.size_hint().0);
-    for channel in filter_list {
-        channels.push(channel?);
-    }
+    let channels = EditCommandFilter::channels_from_results_iter(filter_list)?;
     let channel_cnt = channels.len();
     guild_config.edit_command_filter(&command_name, |e| {
         e.filter_type(CommandDisability::Whitelisted).channels(channels)
@@ -72,10 +69,7 @@ async fn blacklist_command(ctx: &Context, msg: &Message, mut args: Args) -> Comm
     let command_name = args.single::<String>()?;
     let mut arg_iter = args.iter::<ChannelId>();
     let filter_list = arg_iter.quoted().trimmed();
-    let mut channels = Vec::with_capacity(filter_list.size_hint().0);
-    for channel in filter_list {
-        channels.push(channel?);
-    }
+    let channels = EditCommandFilter::channels_from_results_iter(filter_list)?;
     let channel_cnt = channels.len();
     guild_config.edit_command_filter(&command_name, |e| {
         e.filter_type(CommandDisability::Blacklisted).channels(channels)
