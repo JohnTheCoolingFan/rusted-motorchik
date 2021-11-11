@@ -59,9 +59,21 @@ async fn my_help(ctx: &Context, msg: &Message, args: Args, hopt: &'static HelpOp
 
 // TODO: send the error in a message and print if sending in message failed
 #[hook]
-async fn after(_ctx: &Context, _msg: &Message, command_name: &str, command_result: CommandResult) {
+async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result: CommandResult) {
     if let Err(why) = command_result {
         println!("Command '{}' returned error {}", command_name, why);
+        if let Err(why_echo) = msg.channel_id.send_message(&ctx.http, |m| {
+            m.add_embed(|e| {
+                e.color((255, 15, 15))
+                    .title("Error duting running a command")
+                    .description(format!("Error occured while running command `{}`:\n{}", command_name, why))
+                    .footer(|f| {
+                        f.text("Please contact bot author on github/gitlab/discord, see `source` command")
+                    })
+            })
+        }).await {
+            println!("Error sending command error report: {}", why_echo);
+        }
     }
 }
 
