@@ -41,15 +41,15 @@ async fn disable_command(ctx: &Context, msg: &Message, mut args: Args) -> Comman
 #[usage("<command name> [, channel, channel...]")]
 async fn whitelist_command(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     args.trimmed().quoted();
-    let data = ctx.data.read().await;
-    let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
-    let guild_config_lock = data.get::<GuildConfigManagerKey>().unwrap().get_guild_config(&guild).await?;
-    let mut guild_config = guild_config_lock.get().write().await;
     let command_name = args.single::<String>()?;
     let mut arg_iter = args.iter::<ChannelId>();
     let filter_list = arg_iter.quoted().trimmed();
     let channels = EditCommandFilter::channels_from_results_iter(filter_list)?;
     let channel_cnt = channels.len();
+    let data = ctx.data.read().await;
+    let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
+    let guild_config_lock = data.get::<GuildConfigManagerKey>().unwrap().get_guild_config(&guild).await?;
+    let mut guild_config = guild_config_lock.get().write().await;
     guild_config.edit_command_filter(&command_name, |e| {
         e.filter_type(CommandDisability::Whitelisted).channels(channels)
     }).await?;
@@ -62,15 +62,15 @@ async fn whitelist_command(ctx: &Context, msg: &Message, mut args: Args) -> Comm
 #[usage("<command name> [, channel, channel...]")]
 async fn blacklist_command(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     args.trimmed().quoted();
-    let data = ctx.data.read().await;
-    let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
-    let guild_config_lock = data.get::<GuildConfigManagerKey>().unwrap().get_guild_config(&guild).await?;
-    let mut guild_config = guild_config_lock.get().write().await;
     let command_name = args.single::<String>()?;
     let mut arg_iter = args.iter::<ChannelId>();
     let filter_list = arg_iter.quoted().trimmed();
     let channels = EditCommandFilter::channels_from_results_iter(filter_list)?;
     let channel_cnt = channels.len();
+    let data = ctx.data.read().await;
+    let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
+    let guild_config_lock = data.get::<GuildConfigManagerKey>().unwrap().get_guild_config(&guild).await?;
+    let mut guild_config = guild_config_lock.get().write().await;
     guild_config.edit_command_filter(&command_name, |e| {
         e.filter_type(CommandDisability::Blacklisted).channels(channels)
     }).await?;
