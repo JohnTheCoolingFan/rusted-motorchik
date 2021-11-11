@@ -2,7 +2,7 @@ use serenity::prelude::*;
 use serenity::model::prelude::*;
 use serenity::framework::standard::macros::{command, group};
 use serenity::framework::standard::{CommandResult, Args};
-use crate::guild_config::{GuildConfigManagerKey, CommandDisability, InfoChannelType, EditCommandFilter};
+use crate::guild_config::{GuildConfigManagerKey, CommandDisability, InfoChannelType, EditCommandFilter, EditGuildConfig};
 
 /// Enables specified command and disables all filtering
 #[command("enable")]
@@ -152,9 +152,31 @@ async fn set_ic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 #[commands(enable_ic, disable_ic, set_ic)]
 struct InfoChannelsCommands;
 
+/// Set default roles
+#[command]
+#[usage("[role, role...]")]
+async fn default_roles(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    args.trimmed().quoted();
+    let mut arg_iter = args.iter::<RoleId>();
+    let roles_iter = arg_iter.quoted().trimmed();
+    let roles = EditGuildConfig::roles_from_results_iter(roles_iter)?;
+    let roles_cnt = roles.len();
+    let data = ctx.data.read().await;
+    let gc_manager = data.get::<GuildConfigManagerKey>().unwrap();
+    let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
+    let guild_config_lock = gc_manager.get_guild_config(&guild).await?;
+    let mut guild_config = guild_config_lock.get().write().await;
+    guild_config.edit(|e| {
+        e.default_roles(roles)
+    }).await?;
+    msg.channel_id.say(&ctx.http, format!("Default roles ({}) set", roles_cnt)).await?;
+    Ok(())
+}
+
 /// Guild-specific bot settings
 #[group]
 #[required_permissions(ADMINISTRATOR)]
 #[sub_groups(ConfigCommands, InfoChannelsCommands)]
 #[only_in(guilds)]
+#[commands(default_roles)]
 struct ServerConfiguration;
