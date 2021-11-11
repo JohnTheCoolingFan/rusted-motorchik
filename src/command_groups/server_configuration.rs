@@ -45,7 +45,7 @@ async fn whitelist_command(ctx: &Context, msg: &Message, mut args: Args) -> Comm
     let mut arg_iter = args.iter::<ChannelId>();
     let filter_list = arg_iter.quoted().trimmed();
     let channels = EditCommandFilter::channels_from_results_iter(filter_list)?;
-    let channel_cnt = channels.len();
+    let mentions = channels.iter().map(|c| c.mention().to_string()).collect::<Vec<String>>().join("\n");
     let data = ctx.data.read().await;
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
     let guild_config_lock = data.get::<GuildConfigManagerKey>().unwrap().get_guild_config(&guild).await?;
@@ -53,7 +53,7 @@ async fn whitelist_command(ctx: &Context, msg: &Message, mut args: Args) -> Comm
     guild_config.edit_command_filter(&command_name, |e| {
         e.filter_type(CommandDisability::Whitelisted).channels(channels)
     }).await?;
-    msg.channel_id.say(&ctx.http, format!("Set filtering for command `{}` to whitelist. {} channels total", command_name, channel_cnt)).await?;
+    msg.channel_id.say(&ctx.http, format!("Set filtering for command `{}` to whitelist:\n{}", command_name, mentions)).await?;
     Ok(())
 }
 
@@ -66,7 +66,7 @@ async fn blacklist_command(ctx: &Context, msg: &Message, mut args: Args) -> Comm
     let mut arg_iter = args.iter::<ChannelId>();
     let filter_list = arg_iter.quoted().trimmed();
     let channels = EditCommandFilter::channels_from_results_iter(filter_list)?;
-    let channel_cnt = channels.len();
+    let mentions = channels.iter().map(|c| c.mention().to_string()).collect::<Vec<String>>().join("\n");
     let data = ctx.data.read().await;
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
     let guild_config_lock = data.get::<GuildConfigManagerKey>().unwrap().get_guild_config(&guild).await?;
@@ -74,7 +74,7 @@ async fn blacklist_command(ctx: &Context, msg: &Message, mut args: Args) -> Comm
     guild_config.edit_command_filter(&command_name, |e| {
         e.filter_type(CommandDisability::Blacklisted).channels(channels)
     }).await?;
-    msg.channel_id.say(&ctx.http, format!("Set filtering for command `{}` to blacklist. {} channels total", command_name, channel_cnt)).await?;
+    msg.channel_id.say(&ctx.http, format!("Set filtering for command `{}` to blacklist:\n{}", command_name, mentions)).await?;
     Ok(())
 }
 
