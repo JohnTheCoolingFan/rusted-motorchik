@@ -2,7 +2,7 @@ use serenity::prelude::*;
 use serenity::model::prelude::*;
 use serenity::framework::standard::macros::{command, group};
 use serenity::framework::standard::{CommandResult, Args};
-use crate::guild_config::{GuildConfigManagerKey, CommandDisability, InfoChannelType, EditCommandFilter, EditGuildConfig};
+use crate::guild_config::{GuildConfigManager, CommandDisability, InfoChannelType, EditCommandFilter, EditGuildConfig};
 
 /// Enables specified command and disables all filtering
 #[command("enable")]
@@ -10,7 +10,7 @@ use crate::guild_config::{GuildConfigManagerKey, CommandDisability, InfoChannelT
 async fn enable_command(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
     let data = ctx.data.read().await;
-    let guild_config_lock = data.get::<GuildConfigManagerKey>().unwrap().get_guild_config(&guild).await?;
+    let guild_config_lock = data.get::<GuildConfigManager>().unwrap().get_guild_config(&guild).await?;
     let mut guild_config = guild_config_lock.get().write().await;
     let command_name = args.quoted().trimmed().single::<String>()?;
     guild_config.edit_command_filter(&command_name, |e| {
@@ -26,7 +26,7 @@ async fn enable_command(ctx: &Context, msg: &Message, mut args: Args) -> Command
 async fn disable_command(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
     let data = ctx.data.read().await;
-    let guild_config_lock = data.get::<GuildConfigManagerKey>().unwrap().get_guild_config(&guild).await?;
+    let guild_config_lock = data.get::<GuildConfigManager>().unwrap().get_guild_config(&guild).await?;
     let mut guild_config = guild_config_lock.get().write().await;
     let command_name = args.quoted().trimmed().single::<String>()?;
     guild_config.edit_command_filter(&command_name, |e| {
@@ -48,7 +48,7 @@ async fn whitelist_command(ctx: &Context, msg: &Message, mut args: Args) -> Comm
     let mentions = channels.iter().map(|c| c.mention().to_string()).collect::<Vec<String>>().join("\n");
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
     let data = ctx.data.read().await;
-    let guild_config_lock = data.get::<GuildConfigManagerKey>().unwrap().get_guild_config(&guild).await?;
+    let guild_config_lock = data.get::<GuildConfigManager>().unwrap().get_guild_config(&guild).await?;
     let mut guild_config = guild_config_lock.get().write().await;
     guild_config.edit_command_filter(&command_name, |e| {
         e.filter_type(CommandDisability::Whitelisted).channels(channels)
@@ -69,7 +69,7 @@ async fn blacklist_command(ctx: &Context, msg: &Message, mut args: Args) -> Comm
     let mentions = channels.iter().map(|c| c.mention().to_string()).collect::<Vec<String>>().join("\n");
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
     let data = ctx.data.read().await;
-    let guild_config_lock = data.get::<GuildConfigManagerKey>().unwrap().get_guild_config(&guild).await?;
+    let guild_config_lock = data.get::<GuildConfigManager>().unwrap().get_guild_config(&guild).await?;
     let mut guild_config = guild_config_lock.get().write().await;
     guild_config.edit_command_filter(&command_name, |e| {
         e.filter_type(CommandDisability::Blacklisted).channels(channels)
@@ -92,7 +92,7 @@ async fn enable_ic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
     let ic_type = args.single::<InfoChannelType>()?;
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
     let data = ctx.data.read().await;
-    let gc_manager = data.get::<GuildConfigManagerKey>().unwrap();
+    let gc_manager = data.get::<GuildConfigManager>().unwrap();
     let guild_config_lock = gc_manager.get_guild_config(&guild).await?;
     let mut guild_config = guild_config_lock.get().write().await;
     guild_config.edit(|e| {
@@ -112,7 +112,7 @@ async fn disable_ic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
     let ic_type = args.single::<InfoChannelType>()?;
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
     let data = ctx.data.read().await;
-    let gc_manager = data.get::<GuildConfigManagerKey>().unwrap();
+    let gc_manager = data.get::<GuildConfigManager>().unwrap();
     let guild_config_lock = gc_manager.get_guild_config(&guild).await?;
     let mut guild_config = guild_config_lock.get().write().await;
     guild_config.edit(|e| {
@@ -133,7 +133,7 @@ async fn set_ic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let channel = args.single::<ChannelId>()?;
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
     let data = ctx.data.read().await;
-    let gc_manager = data.get::<GuildConfigManagerKey>().unwrap();
+    let gc_manager = data.get::<GuildConfigManager>().unwrap();
     let guild_config_lock = gc_manager.get_guild_config(&guild).await?;
     let mut guild_config = guild_config_lock.get().write().await;
     guild_config.edit(|e| {
@@ -163,7 +163,7 @@ async fn default_roles(ctx: &Context, msg: &Message, mut args: Args) -> CommandR
     let roles_cnt = roles.len();
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
     let data = ctx.data.read().await;
-    let gc_manager = data.get::<GuildConfigManagerKey>().unwrap();
+    let gc_manager = data.get::<GuildConfigManager>().unwrap();
     let guild_config_lock = gc_manager.get_guild_config(&guild).await?;
     let mut guild_config = guild_config_lock.get().write().await;
     guild_config.edit(|e| {

@@ -15,12 +15,6 @@ use strum::IntoEnumIterator;
 use tokio::sync::RwLockReadGuard;
 use serenity::framework::standard::ArgError;
 
-pub struct GuildConfigManagerKey;
-
-impl TypeMapKey for GuildConfigManagerKey {
-    type Value = GuildConfigManager;
-}
-
 #[derive(EnumString, AsRefStr, Hash, Eq, PartialEq, Clone, Copy, Deserialize, Serialize, EnumIter)]
 #[serde(rename_all = "kebab-case")]
 #[strum(serialize_all = "kebab-case")]
@@ -41,6 +35,10 @@ impl<'a, T: Send + Sync, K: Send + Sync + Eq + Hash> GuildConfigReadLock<'a, T, 
     pub fn get(&self) -> &RwLock<T> {
         self.1.get(&self.0).unwrap()
     }
+}
+
+impl TypeMapKey for GuildConfigManager {
+    type Value = Self;
 }
 
 impl GuildConfigManager {

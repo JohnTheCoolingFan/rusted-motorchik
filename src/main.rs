@@ -14,7 +14,7 @@ use serenity::framework::standard::{StandardFramework, CommandResult, Args, Comm
 use serenity::framework::standard::{macros::{help, hook}, help_commands};
 use serenity::utils::ContentSafeOptions;
 use serenity::http::Http;
-use guild_config::{GuildConfigManagerKey, GuildConfigManager};
+use guild_config::GuildConfigManager;
 
 pub fn content_safe_settings(msg: &Message) -> ContentSafeOptions {
     match &msg.guild_id {
@@ -124,7 +124,7 @@ async fn main() {
     {
         let mut client_data = client.data.write().await;
         // TODO: get path from environment variable
-        client_data.insert::<GuildConfigManagerKey>(GuildConfigManager::new("guilds"));
+        client_data.insert::<GuildConfigManager>(GuildConfigManager::new("guilds"));
         client_data.insert::<FactorioReqwestClient>(reqwest::Client::new());
     }
 
