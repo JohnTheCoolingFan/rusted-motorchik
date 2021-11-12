@@ -122,9 +122,10 @@ async fn main() {
         .expect("Err creating client");
 
     {
+        let config_path = env::var("GUILD_CONFIG_HOME").expect("Expected GUILD_CONFIG_HOME path in the environment");
         let mut client_data = client.data.write().await;
         // TODO: get path from environment variable
-        client_data.insert::<GuildConfigManager>(GuildConfigManager::new("guilds"));
+        client_data.insert::<GuildConfigManager>(GuildConfigManager::new(&config_path));
         client_data.insert::<FactorioReqwestClient>(reqwest::Client::new());
     }
 

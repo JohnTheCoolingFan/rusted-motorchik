@@ -59,7 +59,9 @@ impl TypeMapKey for GuildConfigManager {
 impl GuildConfigManager {
     pub fn new(path: impl Into<PathBuf>) -> Self {
         let path = path.into();
+        println!("Guild config home: {:?}", path);
         if !path.exists() {
+            println!("{:?} doesn't exist, creating", path);
             std::fs::create_dir(&path).unwrap();
         }
         Self{gc_cache: RwLock::new(HashMap::new()), config_path: path}
