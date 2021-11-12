@@ -24,6 +24,21 @@ pub enum InfoChannelType {
     ModList
 }
 
+#[repr(u8)]
+#[derive(Deserialize_repr, Serialize_repr, Hash, Eq, PartialEq, Clone, Copy)]
+pub enum CommandDisability {
+    None = 0,
+    Global = 1,
+    Blacklisted = 2,
+    Whitelisted = 3
+}
+
+impl Default for CommandDisability {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
 pub struct GuildConfigManager {
     gc_cache: RwLock<HashMap<GuildId, RwLock<GuildConfig>>>,
     config_path: PathBuf
@@ -66,71 +81,6 @@ impl GuildConfigManager {
     async fn is_cached(&self, guild_id: GuildId) -> bool {
         let gc_cache = self.gc_cache.read().await;
         gc_cache.contains_key(&guild_id)
-    }
-}
-
-#[derive(Default)]
-pub struct EditGuildConfig {
-    default_roles: Option<Vec<RoleId>>,
-    info_channels: HashMap<InfoChannelType, EditInfoChannel>
-}
-
-impl EditGuildConfig {
-    /// Set default roles
-    pub fn default_roles(&mut self, default_roles: Vec<RoleId>) -> &mut Self {
-        self.default_roles = Some(default_roles);
-        self
-    }
-
-    /// Set changes for InfoChannels
-    pub fn info_channel<F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel>(&mut self, ic_type: InfoChannelType, f: F) -> &mut Self {
-        let mut edit_ic = EditInfoChannel::default();
-        f(&mut edit_ic);
-        self.info_channels.insert(ic_type, edit_ic);
-        self
-    }
-
-    /// Alias for [Self::info_channel] with welcome channel dialed in
-    pub fn welcome_info_channel<F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel>(&mut self, f: F) -> &mut Self {
-        self.info_channel(InfoChannelType::Welcome, f)
-    }
-
-    /// Alias for [Self::info_channel] with log channel dialed in
-    pub fn log_info_channel<F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel>(&mut self, f: F) -> &mut Self {
-        self.info_channel(InfoChannelType::Log, f)
-    }
-
-    /// Alias for [Self::info_channel] with modlist channel dialed in
-    pub fn modlist_info_channel<F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel>(&mut self, f: F) -> &mut Self {
-        self.info_channel(InfoChannelType::ModList, f)
-    }
-    
-    pub fn roles_from_results_iter<I: Iterator<Item = Result<RoleId, ArgError<<RoleId as FromStr>::Err>>>>(roles_it: I) -> Result<Vec<RoleId>, ArgError<<RoleId as FromStr>::Err>> {
-        let mut roles = Vec::with_capacity(roles_it.size_hint().0);
-        for role in roles_it {
-            roles.push(role?);
-        };
-        Ok(roles)
-    }
-}
-
-#[derive(Default)]
-pub struct EditInfoChannel {
-    state: Option<bool>,
-    channel: Option<ChannelId>
-}
-
-impl EditInfoChannel {
-    /// Set new state
-    pub fn state(&mut self, new_state: bool) -> &mut Self {
-        self.state = Some(new_state);
-        self
-    }
-
-    /// Set new channel
-    pub fn channel(&mut self, new_channel: ChannelId) -> &mut Self {
-        self.channel = Some(new_channel);
-        self
     }
 }
 
@@ -279,6 +229,51 @@ impl GuildConfigData {
     }
 }
 
+#[derive(Default)]
+pub struct EditGuildConfig {
+    default_roles: Option<Vec<RoleId>>,
+    info_channels: HashMap<InfoChannelType, EditInfoChannel>
+}
+
+impl EditGuildConfig {
+    /// Set default roles
+    pub fn default_roles(&mut self, default_roles: Vec<RoleId>) -> &mut Self {
+        self.default_roles = Some(default_roles);
+        self
+    }
+
+    /// Set changes for InfoChannels
+    pub fn info_channel<F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel>(&mut self, ic_type: InfoChannelType, f: F) -> &mut Self {
+        let mut edit_ic = EditInfoChannel::default();
+        f(&mut edit_ic);
+        self.info_channels.insert(ic_type, edit_ic);
+        self
+    }
+
+    /// Alias for [Self::info_channel] with welcome channel dialed in
+    pub fn welcome_info_channel<F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel>(&mut self, f: F) -> &mut Self {
+        self.info_channel(InfoChannelType::Welcome, f)
+    }
+
+    /// Alias for [Self::info_channel] with log channel dialed in
+    pub fn log_info_channel<F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel>(&mut self, f: F) -> &mut Self {
+        self.info_channel(InfoChannelType::Log, f)
+    }
+
+    /// Alias for [Self::info_channel] with modlist channel dialed in
+    pub fn modlist_info_channel<F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel>(&mut self, f: F) -> &mut Self {
+        self.info_channel(InfoChannelType::ModList, f)
+    }
+    
+    pub fn roles_from_results_iter<I: Iterator<Item = Result<RoleId, ArgError<<RoleId as FromStr>::Err>>>>(roles_it: I) -> Result<Vec<RoleId>, ArgError<<RoleId as FromStr>::Err>> {
+        let mut roles = Vec::with_capacity(roles_it.size_hint().0);
+        for role in roles_it {
+            roles.push(role?);
+        };
+        Ok(roles)
+    }
+}
+
 #[derive(Deserialize, Serialize, Clone)]
 pub struct InfoChannelData {
     pub channel_id: ChannelId,
@@ -286,39 +281,22 @@ pub struct InfoChannelData {
 }
 
 #[derive(Default)]
-pub struct EditCommandFilter {
-    filter_type: Option<CommandDisability>,
-    channels: Option<Vec<ChannelId>>
+pub struct EditInfoChannel {
+    state: Option<bool>,
+    channel: Option<ChannelId>
 }
 
-impl EditCommandFilter {
-    /// Set filter type
-    pub fn filter_type(&mut self, filter_type: CommandDisability) -> &mut Self {
-        self.filter_type = Some(filter_type);
+impl EditInfoChannel {
+    /// Set new state
+    pub fn state(&mut self, new_state: bool) -> &mut Self {
+        self.state = Some(new_state);
         self
     }
 
-    /// Set filter list
-    pub fn channels(&mut self, channels: Vec<ChannelId>) -> &mut Self {
-        self.channels = Some(channels);
+    /// Set new channel
+    pub fn channel(&mut self, new_channel: ChannelId) -> &mut Self {
+        self.channel = Some(new_channel);
         self
-    }
-    
-    pub fn channels_from_results_iter<I: Iterator<Item = Result<ChannelId, ArgError<<ChannelId as FromStr>::Err>>>>(channels_it: I) -> Result<Vec<ChannelId>, ArgError<<ChannelId as FromStr>::Err>> {
-        let mut channels = Vec::with_capacity(channels_it.size_hint().0);
-        for channel in channels_it {
-            channels.push(channel?);
-        };
-        Ok(channels)
-    }
-
-    /// Shorthand for setting filter_type to CommandDisability::None
-    pub fn enable(&mut self) -> &mut Self {
-        self.filter_type(CommandDisability::None)
-    }
-
-    pub fn disable(&mut self) -> &mut Self {
-        self.filter_type(CommandDisability::Global)
     }
 }
 
@@ -368,17 +346,39 @@ struct CommandFilterData {
     channels: Vec<ChannelId>,
 }
 
-#[repr(u8)]
-#[derive(Deserialize_repr, Serialize_repr, Hash, Eq, PartialEq, Clone, Copy)]
-pub enum CommandDisability {
-    None = 0,
-    Global = 1,
-    Blacklisted = 2,
-    Whitelisted = 3
+#[derive(Default)]
+pub struct EditCommandFilter {
+    filter_type: Option<CommandDisability>,
+    channels: Option<Vec<ChannelId>>
 }
 
-impl Default for CommandDisability {
-    fn default() -> Self {
-        Self::None
+impl EditCommandFilter {
+    /// Set filter type
+    pub fn filter_type(&mut self, filter_type: CommandDisability) -> &mut Self {
+        self.filter_type = Some(filter_type);
+        self
+    }
+
+    /// Set filter list
+    pub fn channels(&mut self, channels: Vec<ChannelId>) -> &mut Self {
+        self.channels = Some(channels);
+        self
+    }
+    
+    pub fn channels_from_results_iter<I: Iterator<Item = Result<ChannelId, ArgError<<ChannelId as FromStr>::Err>>>>(channels_it: I) -> Result<Vec<ChannelId>, ArgError<<ChannelId as FromStr>::Err>> {
+        let mut channels = Vec::with_capacity(channels_it.size_hint().0);
+        for channel in channels_it {
+            channels.push(channel?);
+        };
+        Ok(channels)
+    }
+
+    /// Shorthand for setting filter_type to CommandDisability::None
+    pub fn enable(&mut self) -> &mut Self {
+        self.filter_type(CommandDisability::None)
+    }
+
+    pub fn disable(&mut self) -> &mut Self {
+        self.filter_type(CommandDisability::Global)
     }
 }
