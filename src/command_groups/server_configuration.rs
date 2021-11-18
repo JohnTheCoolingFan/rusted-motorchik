@@ -1,8 +1,9 @@
+use std::str::FromStr;
 use serenity::prelude::*;
 use serenity::model::prelude::*;
 use serenity::framework::standard::macros::{command, group};
-use serenity::framework::standard::{CommandResult, Args};
-use crate::guild_config::{GuildConfigManager, CommandDisability, InfoChannelType, EditCommandFilter, EditGuildConfig};
+use serenity::framework::standard::{CommandResult, Args, ArgError};
+use crate::guild_config::{GuildConfigManager, CommandDisability, InfoChannelType};
 
 /// Enables specified command and disables all filtering
 #[command("enable")]
@@ -42,9 +43,7 @@ async fn disable_command(ctx: &Context, msg: &Message, mut args: Args) -> Comman
 async fn whitelist_command(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     args.trimmed().quoted();
     let command_name = args.single::<String>()?;
-    let mut arg_iter = args.iter::<ChannelId>();
-    let filter_list = arg_iter.quoted().trimmed();
-    let channels = EditCommandFilter::channels_from_results_iter(filter_list)?;
+    let channels: Vec<ChannelId> = args.iter::<ChannelId>().quoted().trimmed().collect::<Result<Vec<ChannelId>, ArgError<<ChannelId as FromStr>::Err>>>()?;
     let mentions = channels.iter().map(|c| c.mention().to_string()).collect::<Vec<String>>().join("\n");
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
     let data = ctx.data.read().await;
@@ -63,9 +62,7 @@ async fn whitelist_command(ctx: &Context, msg: &Message, mut args: Args) -> Comm
 async fn blacklist_command(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     args.trimmed().quoted();
     let command_name = args.single::<String>()?;
-    let mut arg_iter = args.iter::<ChannelId>();
-    let filter_list = arg_iter.quoted().trimmed();
-    let channels = EditCommandFilter::channels_from_results_iter(filter_list)?;
+    let channels = args.iter().quoted().trimmed().collect::<Result<Vec<ChannelId>, ArgError<<ChannelId as FromStr>::Err>>>()?;
     let mentions = channels.iter().map(|c| c.mention().to_string()).collect::<Vec<String>>().join("\n");
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
     let data = ctx.data.read().await;
@@ -157,9 +154,7 @@ struct InfoChannelsCommands;
 #[usage("[role, role...]")]
 async fn default_roles(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     args.trimmed().quoted();
-    let mut arg_iter = args.iter::<RoleId>();
-    let roles_iter = arg_iter.quoted().trimmed();
-    let roles = EditGuildConfig::roles_from_results_iter(roles_iter)?;
+    let roles = args.iter().quoted().trimmed().collect::<Result<Vec<RoleId>, ArgError<<RoleId as FromStr>::Err>>>()?;
     let roles_cnt = roles.len();
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
     let data = ctx.data.read().await;

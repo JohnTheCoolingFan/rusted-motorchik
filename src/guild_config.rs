@@ -266,14 +266,6 @@ impl EditGuildConfig {
     pub fn modlist_info_channel<F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel>(&mut self, f: F) -> &mut Self {
         self.info_channel(InfoChannelType::ModList, f)
     }
-    
-    pub fn roles_from_results_iter<I: Iterator<Item = Result<RoleId, ArgError<<RoleId as FromStr>::Err>>>>(roles_it: I) -> Result<Vec<RoleId>, ArgError<<RoleId as FromStr>::Err>> {
-        let mut roles = Vec::with_capacity(roles_it.size_hint().0);
-        for role in roles_it {
-            roles.push(role?);
-        };
-        Ok(roles)
-    }
 }
 
 #[derive(Deserialize, Serialize, Clone)]
