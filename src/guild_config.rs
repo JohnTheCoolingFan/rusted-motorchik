@@ -16,6 +16,8 @@ use strum::IntoEnumIterator;
 use tokio::sync::RwLockReadGuard;
 use serenity::framework::standard::ArgError;
 
+// TODO: restructure using Arcs
+
 #[derive(EnumString, AsRefStr, Hash, Eq, PartialEq, Clone, Copy, Deserialize, Serialize, EnumIter)]
 #[serde(rename_all = "kebab-case")]
 #[strum(serialize_all = "kebab-case")]
