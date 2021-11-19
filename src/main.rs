@@ -5,6 +5,7 @@ use command_groups::*;
 
 use std::env;
 use std::collections::HashSet;
+use std::sync::Arc;
 use serenity::model::prelude::*;
 use serenity::client::bridge::gateway::GatewayIntents;
 use serenity::async_trait;
@@ -125,7 +126,7 @@ async fn main() {
         let config_path = env::var("GUILD_CONFIG_HOME").expect("Expected GUILD_CONFIG_HOME path in the environment");
         let mut client_data = client.data.write().await;
         // TODO: get path from environment variable
-        client_data.insert::<GuildConfigManager>(GuildConfigManager::new(&config_path));
+        client_data.insert::<GuildConfigManager>(Arc::new(GuildConfigManager::new(&config_path)));
         client_data.insert::<FactorioReqwestClient>(reqwest::Client::new());
     }
 

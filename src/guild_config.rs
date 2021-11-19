@@ -6,6 +6,7 @@ use std::error::Error;
 use std::iter;
 use std::path::{PathBuf, Path};
 use std::collections::HashMap;
+use std::sync::Arc;
 use serenity::prelude::*;
 use serenity::model::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -53,7 +54,7 @@ impl<'a, T: Send + Sync, K: Send + Sync + Eq + Hash> GuildConfigReadLock<'a, T, 
 }
 
 impl TypeMapKey for GuildConfigManager {
-    type Value = Self;
+    type Value = Arc<Self>;
 }
 
 impl GuildConfigManager {
