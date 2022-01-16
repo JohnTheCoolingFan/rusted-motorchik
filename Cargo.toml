@@ -10,7 +10,7 @@ serenity = "0.10"
 tokio = { version = "1.0", features = [ "full" ] }
 chrono = "0.4"
 sys-info = "0.9"
-psutil = "3"
+#psutil = "3.2.1"
 scraper = "0"
 reqwest = { version = "0", features = [ "json" ] }
 thiserror = "1.0"
