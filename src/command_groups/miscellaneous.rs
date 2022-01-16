@@ -43,6 +43,7 @@ async fn hostinfo(ctx: &Context, msg: &Message) -> CommandResult {
                     _ => "unknwon".into()
                 }, true)
                 .field("Architecture", env::consts::ARCH, true)
+                /*
                 .field("Host uptime", match psutil::host::uptime() {
                     Ok(dur) => match chrono::Duration::from_std(dur) {
                         // TODO: Improve formatting (don't display days when 0, etc)
@@ -55,6 +56,7 @@ async fn hostinfo(ctx: &Context, msg: &Message) -> CommandResult {
                     },
                     _ => "Unknown".into()
                 }, true)
+                */
         })
     }).await?;
     Ok(())
