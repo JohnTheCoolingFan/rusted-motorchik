@@ -350,14 +350,6 @@ impl EditCommandFilter {
         self.channels = Some(channels);
         self
     }
-    
-    pub fn channels_from_results_iter<I: Iterator<Item = Result<ChannelId, ArgError<<ChannelId as FromStr>::Err>>>>(channels_it: I) -> Result<Vec<ChannelId>, ArgError<<ChannelId as FromStr>::Err>> {
-        let mut channels = Vec::with_capacity(channels_it.size_hint().0);
-        for channel in channels_it {
-            channels.push(channel?);
-        };
-        Ok(channels)
-    }
 
     /// Shorthand for setting filter_type to CommandDisability::None
     pub fn enable(&mut self) -> &mut Self {
