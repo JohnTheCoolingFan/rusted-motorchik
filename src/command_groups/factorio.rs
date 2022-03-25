@@ -12,13 +12,13 @@ use semver::Version;
 
 // TODO: Re-use client session
 
-static MOD_LIST: [&str; 5] = ["artillery-spidertron", "PlaceableOffGrid", "NoArtilleryMapReveal", "RandomFactorioThings", "PlutoniumEnergy"];
+const MOD_LIST: [&str; 5] = ["artillery-spidertron", "PlaceableOffGrid", "NoArtilleryMapReveal", "RandomFactorioThings", "PlutoniumEnergy"];
 
-static MODPORTAL_URL: &str = "https://mods.factorio.com";
-static LAUNCHER_URL: &str = "https://factorio-launcher-mods.storage.googleapis.com/";
+const MODPORTAL_URL: &str = "https://mods.factorio.com";
+const LAUNCHER_URL: &str = "https://factorio-launcher-mods.storage.googleapis.com/";
 
-static FAILED_EMBED_COLOR: (u8, u8, u8) = (255, 10, 10);
-static SUCCESS_EMBED_COLOR: (u8, u8, u8) = (47, 137, 197);
+const FAILED_EMBED_COLOR: (u8, u8, u8) = (255, 10, 10);
+const SUCCESS_EMBED_COLOR: (u8, u8, u8) = (47, 137, 197);
 
 pub struct FactorioReqwestClient;
 
