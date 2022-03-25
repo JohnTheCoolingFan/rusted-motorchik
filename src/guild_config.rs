@@ -15,8 +15,6 @@ use strum_macros::{EnumString, AsRefStr, EnumIter};
 use strum::IntoEnumIterator;
 use serenity::framework::standard::ArgError;
 
-// TODO: restructure using Arcs
-
 #[derive(EnumString, AsRefStr, Hash, Eq, PartialEq, Clone, Copy, Deserialize, Serialize, EnumIter)]
 #[serde(rename_all = "kebab-case")]
 #[strum(serialize_all = "kebab-case")]
