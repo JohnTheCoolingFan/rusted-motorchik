@@ -116,8 +116,8 @@ impl EventHandler for Handler {
                 let data = ctx.data.read().await;
                 data.get::<GuildConfigManager>().unwrap().clone()
             };
-            let guild_config_lock = gc_manager.get_guild_config(&guild).await.unwrap();
-            let guild_config = guild_config_lock.get().read().await;
+            let guild_config_arc = gc_manager.get_guild_config(&guild).await.unwrap();
+            let guild_config = guild_config_arc.read().await;
             guild_config.default_roles().clone()
         };
         queue.write().await.push(RoleQueueItem{user_id: new_member.user.id, guild_id: new_member.guild_id, roles});
