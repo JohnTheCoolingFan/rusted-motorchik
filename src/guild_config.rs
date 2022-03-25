@@ -13,7 +13,6 @@ use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum_macros::{EnumString, AsRefStr, EnumIter};
 use strum::IntoEnumIterator;
-use tokio::sync::RwLockReadGuard;
 use serenity::framework::standard::ArgError;
 
 // TODO: restructure using Arcs
@@ -43,16 +42,8 @@ impl Default for CommandDisability {
 }
 
 pub struct GuildConfigManager {
-    gc_cache: RwLock<HashMap<GuildId, RwLock<GuildConfig>>>,
+    gc_cache: RwLock<HashMap<GuildId, Arc<RwLock<GuildConfig>>>>,
     config_path: PathBuf
-}
-
-pub struct GuildConfigReadLock<'a, T: Send + Sync, K: Send + Sync + Eq + Hash>(pub K, RwLockReadGuard<'a, HashMap<K, RwLock<T>>>);
-
-impl<'a, T: Send + Sync, K: Send + Sync + Eq + Hash> GuildConfigReadLock<'a, T, K> {
-    pub fn get(&self) -> &RwLock<T> {
-        self.1.get(&self.0).unwrap()
-    }
 }
 
 impl TypeMapKey for GuildConfigManager {
@@ -70,17 +61,17 @@ impl GuildConfigManager {
         Self{gc_cache: RwLock::new(HashMap::new()), config_path: path}
     }
 
-    pub async fn get_guild_config(&self, guild: &Guild) -> Result<GuildConfigReadLock<'_, GuildConfig, GuildId>, Box<dyn Error + Send + Sync>> {
+    pub async fn get_guild_config(&self, guild: &Guild) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
         if !self.is_cached(guild.id).await {
             let mut gc_cache = self.gc_cache.write().await;
             if let Ok(gc) = GuildConfig::read(guild.id, &self.config_path) {
-                gc_cache.insert(guild.id, RwLock::new(gc));
+                gc_cache.insert(guild.id, Arc::new(RwLock::new(gc)));
             } else  {
-                gc_cache.insert(guild.id, RwLock::new(GuildConfig::new(guild, &self.config_path)?));
+                gc_cache.insert(guild.id, Arc::new(RwLock::new(GuildConfig::new(guild, &self.config_path)?)));
             }
         }
         let gc_cache = self.gc_cache.read().await;
-        Ok(GuildConfigReadLock(guild.id, gc_cache))
+        Ok(Arc::clone(gc_cache.get(&guild.id).unwrap()))
     }
 
     async fn is_cached(&self, guild_id: GuildId) -> bool {
@@ -91,7 +82,7 @@ impl GuildConfigManager {
 
 pub struct GuildConfig {
     pub guild_id: GuildId,
-    cf_cache: RwLock<HashMap<String, RwLock<CommandFilter>>>,
+    cf_cache: RwLock<HashMap<String, Arc<RwLock<CommandFilter>>>>,
     config_path: PathBuf,
     data: GuildConfigData
 }
@@ -108,13 +99,13 @@ impl GuildConfig {
     }
 
     /// Get command filter
-    pub async fn get_command_filter(&self, command_name: &str) -> GuildConfigReadLock<'_, CommandFilter, String> {
+    pub async fn get_command_filter(&self, command_name: &str) -> Arc<RwLock<CommandFilter>> {
         if !self.is_cached(command_name).await {
             let mut cf_cache = self.cf_cache.write().await;
-            cf_cache.insert(command_name.into(), RwLock::new(CommandFilter::default(self.guild_id, command_name.into())));
+            cf_cache.insert(command_name.into(), Arc::new(RwLock::new(CommandFilter::default(self.guild_id, command_name.into()))));
         }
         let cf_cache = self.cf_cache.read().await;
-        GuildConfigReadLock(command_name.into(), cf_cache)
+        Arc::clone(cf_cache.get(command_name).unwrap())
     }
 
     /// Edit this GuildConfig
@@ -148,8 +139,8 @@ impl GuildConfig {
         f(&mut cf_edit);
         if cf_edit.filter_type.is_some() || cf_edit.channels.is_some() {
             {
-                let command_filter_lock = self.get_command_filter(command_name).await;
-                let mut command_filter = command_filter_lock.get().write().await;
+                let command_filter_arc = self.get_command_filter(command_name).await;
+                let mut command_filter = command_filter_arc.write().await;
                 if let Some(filter_type) = cf_edit.filter_type {
                     command_filter.data.filter_type = filter_type
                 }
