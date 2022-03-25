@@ -6,7 +6,6 @@ use command_groups::*;
 use std::env;
 use std::collections::HashSet;
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 use serenity::model::prelude::*;
 use serenity::client::bridge::gateway::GatewayIntents;
 use serenity::async_trait;
