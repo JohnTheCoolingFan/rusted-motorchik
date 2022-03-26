@@ -110,6 +110,9 @@ impl EventHandler for Handler {
                                         if let Err(why) = channel.delete_messages(&ctx2, messages).await {
                                             println!("Failed to update mod list at guild {} in channel {} due to a folloeing error: {}", guild, channel, why);
                                         }
+                                    };
+                                    if let Err(why) = scheduled_modlist(ctx2.as_ref(), channel).await {
+                                        println!("Failed to send mod list in guild {}, channel {} due to a following error: {}", guild, channel, why);
                                     }
                                 }
                             }
