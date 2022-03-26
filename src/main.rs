@@ -299,6 +299,7 @@ async fn main() {
             .prefix("$!")
             .delimiters(vec![", ", ","])
             .owners(owners))
+        .before(before)
         .after(after)
         .help(&MY_HELP)
         .group(&TESTCOMMANDS_GROUP)
