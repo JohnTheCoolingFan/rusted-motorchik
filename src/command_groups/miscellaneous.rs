@@ -5,8 +5,8 @@ use serenity::framework::standard::macros::{command, group};
 use serenity::framework::standard::CommandResult;
 use chrono::offset::Utc;
 
-static GITHUB_URL: &str = "https://github.com/JohnTheCoolingFan/rusted-motorchik";
-static GITLAB_URL: &str = "Sorry, not available yet";
+const GITHUB_URL: &str = "https://github.com/JohnTheCoolingFan/rusted-motorchik";
+const GITLAB_URL: &str = "Sorry, not available yet";
 
 #[command]
 async fn github(ctx: &Context, msg: &Message) -> CommandResult {
