@@ -29,6 +29,13 @@ impl TypeMapKey for RoleQueue {
     type Value = Arc<RwLock<Vec<(GuildId, UserId)>>>;
 }
 
+// Info about ignoring certain users banned in a certain guild when handling guild_ban_addition
+pub struct BanMessageIgnoreList;
+
+impl TypeMapKey for BanMessageIgnoreList {
+    type Value = Arc<RwLock<HashSet<(GuildId, UserId)>>>;
+}
+
 pub fn content_safe_settings(msg: &Message) -> ContentSafeOptions {
     match &msg.guild_id {
         Some(guild_id) => ContentSafeOptions::default().clean_channel(false).display_as_member_from(guild_id),
@@ -190,7 +197,12 @@ impl EventHandler for Handler {
 
     // Member was banned (by anyone, including this bot)
     async fn guild_ban_addition(&self, ctx: Context, guild_id: GuildId, banned_user: User) {
-        Self::log_channel_ban_message(&ctx, guild_id, &banned_user, None, None).await;
+        let ignore_list = Arc::clone(ctx.data.read().await.get::<BanMessageIgnoreList>().unwrap());
+        if ignore_list.read().await.contains(&(guild_id, banned_user.id)) {
+            ignore_list.write().await.remove(&(guild_id, banned_user.id));
+        } else {
+            Self::log_channel_ban_message(&ctx, guild_id, &banned_user, None, None).await;
+        }
     }
 }
 

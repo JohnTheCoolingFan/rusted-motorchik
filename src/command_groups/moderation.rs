@@ -3,7 +3,8 @@ use serenity::model::prelude::*;
 use serenity::framework::standard::macros::{command, group};
 use serenity::framework::standard::{CommandResult, Args};
 use std::time::Duration;
-use crate::Handler;
+use crate::{Handler, BanMessageIgnoreList};
+use std::sync::Arc;
 
 #[command]
 #[aliases(clear, cl)]
@@ -29,6 +30,20 @@ async fn kick(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         false => Some(args.single::<String>()?)
     };
     Handler::log_channel_kick_message(ctx, msg.guild_id.unwrap(), &user, &msg.author, reason).await;
+    Ok(())
+}
+
+#[command]
+#[required_permissions(BAN_MEMBERS)]
+async fn ban(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let user = args.single::<UserId>()?;
+    let reason = match args.is_empty() {
+        true => None,
+        false => Some(args.single::<String>()?)
+    };
+    let ignore_list = Arc::clone(ctx.data.read().await.get::<BanMessageIgnoreList>().unwrap());
+    ignore_list.write().await.insert((msg.guild_id.unwrap(), user));
+    Handler::log_channel_ban_message(ctx, msg.guild_id.unwrap(), &user.to_user(ctx).await?, Some(&msg.author), reason).await;
     Ok(())
 }
 
