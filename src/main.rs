@@ -19,10 +19,11 @@ use serenity::framework::standard::{StandardFramework, CommandResult, Args, Comm
 use serenity::framework::standard::{macros::{help, hook}, help_commands};
 use serenity::utils::ContentSafeOptions;
 use serenity::http::Http;
-use guild_config::GuildConfigManager;
+use guild_config::{GuildConfigManager, InfoChannelType};
 use role_queue::RoleQueue;
 
-const ROLE_QUEUE_INTERVAL: Duration = Duration::from_secs(30);
+const ROLE_QUEUE_INTERVAL: Duration = Duration::from_secs(30); // 30 seconds
+const MOD_LIST_UPDATE_INTERVAL: Duration = Duration::from_secs(60 * 60); // 1 hour
 
 pub fn content_safe_settings(msg: &Message) -> ContentSafeOptions {
     match &msg.guild_id {
@@ -54,10 +55,11 @@ impl EventHandler for Handler {
         }
     }
 
-    async fn cache_ready(&self, ctx: Context, _guilds: Vec<GuildId>) {
+    async fn cache_ready(&self, ctx: Context, guilds: Vec<GuildId>) {
         println!("Cache built successfully!");
 
         let ctx = Arc::new(ctx);
+        let guilds = Arc::new(guilds);
 
         if !self.is_loop_running.load(Ordering::Relaxed) {
             let ctx1 = Arc::clone(&ctx);
@@ -86,6 +88,35 @@ impl EventHandler for Handler {
                     queue_write.clear();
                     queue_write.append(&mut new_queue);
                     tokio::time::sleep(ROLE_QUEUE_INTERVAL).await;
+                }
+            });
+
+            let ctx2 = Arc::clone(&ctx);
+            let guilds1 = Arc::clone(&guilds);
+
+            // Update mod list
+            // TODO: somehow update list of guilds to iterate over (for example, bot added to a new
+            //       guild while running)
+            tokio::spawn(async move {
+                loop {
+                    let gc_manager = Arc::clone(ctx2.data.read().await.get::<GuildConfigManager>().unwrap());
+                    for guild in &*guilds1 {
+                        let guild_cached = guild.to_guild_cached(&ctx2).await.unwrap();
+                        if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
+                            if let Some(mod_list_ic_data) = guild_config.read().await.info_channels_data(InfoChannelType::ModList) {
+                                if mod_list_ic_data.enabled {
+                                    let channel = mod_list_ic_data.channel_id;
+                                    if let Ok(messages) = channel.messages(&ctx2, |gm| gm.limit(MOD_LIST.len() as u64)).await {
+                                        if let Err(why) = channel.delete_messages(&ctx2, messages).await {
+                                            println!("Failed to update mod list at guild {} in channel {} due to a folloeing error: {}", guild, channel, why);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    };
+
+                    tokio::time::sleep(MOD_LIST_UPDATE_INTERVAL).await;
                 }
             });
         }
