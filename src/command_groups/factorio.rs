@@ -12,7 +12,7 @@ use semver::Version;
 
 // TODO: Re-use client session
 
-const MOD_LIST: [&str; 6] = ["artillery-spidertron", "PlaceableOffGrid", "NoArtilleryMapReveal", "RandomFactorioThings", "PlutoniumEnergy", "ReactorDansen"];
+pub const MOD_LIST: [&str; 6] = ["artillery-spidertron", "PlaceableOffGrid", "NoArtilleryMapReveal", "RandomFactorioThings", "PlutoniumEnergy", "ReactorDansen"];
 
 const MODPORTAL_URL: &str = "https://mods.factorio.com";
 const LAUNCHER_URL: &str = "https://factorio-launcher-mods.storage.googleapis.com/";
