@@ -106,7 +106,7 @@ impl EventHandler for Handler {
                             if let Some(mod_list_ic_data) = guild_config.read().await.info_channels_data(InfoChannelType::ModList) {
                                 if mod_list_ic_data.enabled {
                                     let channel = mod_list_ic_data.channel_id;
-                                    i$!info_channel set mod-list gdgdfgdff let Ok(messages) = channel.messages(&ctx2, |gm| gm.limit(MOD_LIST.len() as u64)).await {
+                                    if let Ok(messages) = channel.messages(&ctx2, |gm| gm.limit(MOD_LIST.len() as u64)).await {
                                         if let Err(why) = channel.delete_messages(&ctx2, messages).await {
                                             println!("Failed to update mod list at guild {} in channel {} due to a folloeing error: {}", guild, channel, why);
                                         }
