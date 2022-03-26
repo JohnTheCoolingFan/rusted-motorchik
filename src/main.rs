@@ -23,7 +23,7 @@ use guild_config::{GuildConfigManager, InfoChannelType};
 use role_queue::RoleQueue;
 
 const ROLE_QUEUE_INTERVAL: Duration = Duration::from_secs(30); // 30 seconds
-const MOD_LIST_UPDATE_INTERVAL: Duration = Duration::from_secs(60 * 60); // 1 hour
+const MOD_LIST_UPDATE_INTERVAL: Duration = Duration::from_secs(10); // 1 hour
 
 pub fn content_safe_settings(msg: &Message) -> ContentSafeOptions {
     match &msg.guild_id {
@@ -106,7 +106,7 @@ impl EventHandler for Handler {
                             if let Some(mod_list_ic_data) = guild_config.read().await.info_channels_data(InfoChannelType::ModList) {
                                 if mod_list_ic_data.enabled {
                                     let channel = mod_list_ic_data.channel_id;
-                                    if let Ok(messages) = channel.messages(&ctx2, |gm| gm.limit(MOD_LIST.len() as u64)).await {
+                                    i$!info_channel set mod-list gdgdfgdff let Ok(messages) = channel.messages(&ctx2, |gm| gm.limit(MOD_LIST.len() as u64)).await {
                                         if let Err(why) = channel.delete_messages(&ctx2, messages).await {
                                             println!("Failed to update mod list at guild {} in channel {} due to a folloeing error: {}", guild, channel, why);
                                         }
@@ -162,7 +162,7 @@ async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result:
         if let Err(why_echo) = msg.channel_id.send_message(&ctx.http, |m| {
             m.add_embed(|e| {
                 e.color((255, 15, 15))
-                    .title("Error during running a command")
+                    .title("Error executing a command")
                     .description(format!("Error occured while running command `{}`:\n{}", command_name, why))
                     .footer(|f| {
                         f.text("Please contact bot author on github/gitlab/discord, see `source` command")
