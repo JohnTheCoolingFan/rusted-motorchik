@@ -203,6 +203,22 @@ impl EventHandler for Handler {
         }
     }
 
+    // Member left a guild, or was banned/kicked
+    async fn guild_member_removal(&self, ctx: Context, guild_id: GuildId, user: User, _member_data_if_available: Option<Member>) {
+        let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
+        let guild_cached = guild_id.to_guild_cached(&ctx).await.unwrap();
+        if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
+            if let Some(welcome_ic_data) = guild_config.read().await.info_channels_data(InfoChannelType::Welcome) {
+                if welcome_ic_data.enabled {
+                    let channel = welcome_ic_data.channel_id;
+                    if let Err(why) = channel.say(&ctx, format!("Goodbye, {}", user.name)).await {
+                        println!("Failed to say goodbye to user {} who left guild {} due to a folloeing error: {}", user, guild_id, why);
+                    }
+                }
+            }
+        }
+    }
+
     // Member was banned (by anyone, including this bot)
     async fn guild_ban_addition(&self, ctx: Context, guild_id: GuildId, banned_user: User) {
         let ignore_list = Arc::clone(ctx.data.read().await.get::<BanMessageIgnoreList>().unwrap());
