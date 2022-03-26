@@ -37,7 +37,7 @@ struct Handler {
 }
 
 impl Handler {
-    async fn log_channel_ban_message(&self, ctx: &Context, guild_id: GuildId, user: &User, banned_by: Option<&User>) {
+    async fn log_channel_ban_message(&self, ctx: &Context, guild_id: GuildId, user: &User, banned_by: Option<&User>, ban_reason: Option<String>) {
         let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
         let guild_cached = guild_id.to_guild_cached(&ctx).await.unwrap();
         if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
@@ -47,10 +47,12 @@ impl Handler {
                     if let Ok(bans) = guild_cached.bans(ctx).await {
                         for ban in bans {
                             if &ban.user == user {
-                                let reason = ban.reason.map(|r| format!("Reason: {}", r)).unwrap_or_else(|| "Reason was not provided".into());
-                                if let Err(why) = channel.say(ctx, format!("User {} was banned.\n{}", user, reason)).await {
+                                let reason = ban_reason.unwrap_or_else(|| ban.reason.map(|r| format!("Reason: {}", r)).unwrap_or_else(|| "Reason was not provided".into()));
+                                let ban_issued_by = banned_by.map(|bby| format!(" by {}", bby)).unwrap_or_else(String::new);
+                                if let Err(why) = channel.say(ctx, format!("User {} was banned{}.\n{}", user, ban_issued_by, reason)).await {
                                     println!("Error sending a ban log message: {}", why);
                                 }
+                                break;
                             }
                         }
                     }
@@ -168,7 +170,7 @@ impl EventHandler for Handler {
 
     // Member was banned (by anyone, including this bot)
     async fn guild_ban_addition(&self, ctx: Context, guild_id: GuildId, banned_user: User) {
-        self.log_channel_ban_message(&ctx, guild_id, &banned_user, None).await;
+        self.log_channel_ban_message(&ctx, guild_id, &banned_user, None, None).await;
     }
 }
 
