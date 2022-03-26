@@ -1,11 +1,15 @@
 mod command_groups;
 mod guild_config;
+mod role_queue;
 
 use command_groups::*;
 
 use std::env;
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
+use serenity::prelude::*;
 use serenity::model::prelude::*;
 use serenity::client::bridge::gateway::GatewayIntents;
 use serenity::async_trait;
@@ -16,6 +20,9 @@ use serenity::framework::standard::{macros::{help, hook}, help_commands};
 use serenity::utils::ContentSafeOptions;
 use serenity::http::Http;
 use guild_config::GuildConfigManager;
+use role_queue::RoleQueue;
+
+const ROLE_QUEUE_INTERVAL: Duration = Duration::from_secs(30);
 
 pub fn content_safe_settings(msg: &Message) -> ContentSafeOptions {
     match &msg.guild_id {
@@ -24,20 +31,78 @@ pub fn content_safe_settings(msg: &Message) -> ContentSafeOptions {
     }
 }
 
-struct Handler;
+struct Handler {
+    is_loop_running: AtomicBool
+}
 
 #[async_trait]
 impl EventHandler for Handler {
+    // Print account info
     async fn ready(&self, _: Context, ready: Ready) {
         println!("Connected as {}", ready.user.name);
     }
 
+    // Redirect DMs to author
     async fn message(&self, ctx: Context, msg: Message) {
         if msg.is_private() && !msg.is_own(&ctx.cache).await {
             if let Ok(appinfo) = ctx.http.get_current_application_info().await {
                 let owner = appinfo.owner;
                 if let Err(why) = owner.dm(&ctx.http, |m| m.content(format!("I have received a message from {}:\n{}", msg.author.tag(), msg.content))).await {
                     println!("Failed to redirect message: {}", why)
+                }
+            }
+        }
+    }
+
+    async fn cache_ready(&self, ctx: Context, _guilds: Vec<GuildId>) {
+        println!("Cache built successfully!");
+
+        let ctx = Arc::new(ctx);
+
+        if !self.is_loop_running.load(Ordering::Relaxed) {
+            let ctx1 = Arc::clone(&ctx);
+
+            // Members on hold for role giving
+            tokio::spawn(async move {
+                loop {
+                    let queue = Arc::clone(ctx1.data.read().await.get::<RoleQueue>().unwrap());
+                    let mut new_queue: Vec<(GuildId, UserId)> = Vec::with_capacity(queue.read().await.len());
+                    for item in &*queue.read().await {
+                        if let Ok(mut member) = item.0.member(Arc::clone(&ctx1.http), item.1).await {
+                            if member.pending {
+                                new_queue.push(*item)
+                            } else {
+                                let gc_manager = Arc::clone(ctx1.data.read().await.get::<GuildConfigManager>().unwrap());
+                                let guild_cached = member.guild_id.to_guild_cached(&ctx1).await.unwrap();
+                                if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
+                                    if let Err(why) = member.add_roles(&ctx1, guild_config.read().await.default_roles()).await {
+                                        println!("Failed to give roles to member {} of guild {}: {}", member.user.id, member.guild_id, why);
+                                    }
+                                }
+                            }
+                        }
+                    };
+                    let mut queue_write = queue.write().await;
+                    queue_write.clear();
+                    queue_write.append(&mut new_queue);
+                    tokio::time::sleep(ROLE_QUEUE_INTERVAL).await;
+                }
+            });
+        }
+    }
+
+    // Member joined a guild
+    async fn guild_member_addition(&self, ctx: Context, guild_id: GuildId, mut new_member: Member) {
+        let queue = Arc::clone(ctx.data.read().await.get::<RoleQueue>().unwrap());
+        if new_member.pending {
+            let mut queue_write = queue.write().await;
+            queue_write.push((guild_id, new_member.user.id))
+        } else {
+            let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
+            let guild_cached = guild_id.to_guild_cached(&ctx).await.unwrap();
+            if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
+                if let Err(why) = new_member.add_roles(&ctx, guild_config.read().await.default_roles()).await {
+                    println!("Failed to give roles to member {} of guild {}: {}", new_member.user.id, guild_id, why);
                 }
             }
         }
@@ -116,7 +181,7 @@ async fn main() {
         .group(&SERVERCONFIGURATION_GROUP);
 
     let mut client = Client::builder(&token)
-        .event_handler(Handler)
+        .event_handler(Handler{is_loop_running: AtomicBool::new(false)})
         .framework(framework)
         .intents(GatewayIntents::all())
         .await
@@ -125,6 +190,7 @@ async fn main() {
     {
         let config_path = env::var("GUILD_CONFIG_HOME").expect("Expected GUILD_CONFIG_HOME path in the environment");
         let mut client_data = client.data.write().await;
+        client_data.insert::<RoleQueue>(Arc::new(RwLock::new(Vec::new())));
         client_data.insert::<GuildConfigManager>(Arc::new(GuildConfigManager::new(&config_path)));
         client_data.insert::<FactorioReqwestClient>(reqwest::Client::new());
     }
