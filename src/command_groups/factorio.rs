@@ -75,8 +75,12 @@ struct InfoJson {
     factorio_version: String
 }
 
+/// Get info about a Factorio mod from official mod portal.
 #[command]
 #[aliases(modstat, ms)]
+#[example("Plutonium Energy, Random Factorio Things, Krastorio")]
+#[usage("mod name[, mod name, ...]")]
+#[min_args(1)]
 async fn mods_statistics(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     for mod_name in args.quoted().trimmed().iter::<String>() {
         process_mod(ctx, msg.channel_id, &mod_name?).await?;
@@ -84,6 +88,7 @@ async fn mods_statistics(ctx: &Context, msg: &Message, mut args: Args) -> Comman
     Ok(())
 }
 
+/// Run mods_statistics for each mod from the list (hard-coded).
 #[command]
 #[aliases(ml)]
 async fn modlist(ctx: &Context, msg: &Message) -> CommandResult {
@@ -209,6 +214,8 @@ async fn find_mod(ctx: &Context, mod_name: &str) -> Result<String, Box<dyn Error
 
 #[group]
 #[commands(mods_statistics, modlist)]
+#[description("Commands related to Factorio mods")]
+#[summary("Factorio mods")]
 struct Factorio;
 
 #[derive(Error, Debug)]

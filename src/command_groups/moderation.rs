@@ -6,9 +6,15 @@ use std::time::Duration;
 use crate::{Handler, BanMessageIgnoreList};
 use std::sync::Arc;
 
+const CLEARCHAT_WAIT_DURATION: Duration = Duration::from_secs(3);
+
+/// Removes X last messages from the channel this command is invoked in
 #[command]
 #[aliases(clear, cl)]
 #[required_permissions(MANAGE_MESSAGES)]
+#[num_args(1)]
+#[usage("X")]
+#[example("10")]
 async fn clearchat(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let count = args.single::<u64>()?;
     msg.delete(&ctx.http).await?;
@@ -16,13 +22,17 @@ async fn clearchat(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
     let deleted_count = messages.len();
     msg.channel_id.delete_messages(&ctx.http, messages).await?;
     let confirmation_msg = msg.channel_id.say(&ctx.http, format!("Deleted {} message(s)", deleted_count)).await?;
-    tokio::time::sleep(Duration::from_secs(3)).await;
+    tokio::time::sleep(CLEARCHAT_WAIT_DURATION).await;
     confirmation_msg.delete(&ctx.http).await?;
     Ok(())
 }
 
+/// Kicks specified member and logs to a log channel if it is enabled
 #[command]
 #[required_permissions(KICK_MEMBERS)]
+#[num_args(1)]
+#[usage("@Member")]
+#[example("@Wumpus")]
 async fn kick(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let user = args.single::<UserId>()?;
     let reason = match args.is_empty() {
@@ -33,8 +43,12 @@ async fn kick(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     Ok(())
 }
 
+/// "Bans specified member and logs to a log channel if it is enabled
 #[command]
 #[required_permissions(BAN_MEMBERS)]
+#[num_args(1)]
+#[usage("@Member")]
+#[example("@VeryAgressiveSpammer")]
 async fn ban(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let user = args.single::<UserId>()?;
     let reason = match args.is_empty() {
@@ -47,8 +61,7 @@ async fn ban(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     Ok(())
 }
 
-// Other commands require InfoChannels functionality to function as intended.
-
+/// Useful tools for moderation
 #[group]
 #[commands(clearchat, kick, ban)]
 struct Moderation;

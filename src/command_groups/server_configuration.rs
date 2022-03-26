@@ -5,9 +5,11 @@ use serenity::framework::standard::macros::{command, group};
 use serenity::framework::standard::{CommandResult, Args, ArgError};
 use crate::guild_config::{GuildConfigManager, CommandDisability, InfoChannelType};
 
-/// Enables specified command and disables all filtering
+/// Enable (globally for the entire server/guild) specified command
 #[command("enable")]
+#[num_args(1)]
 #[usage("<command name>")]
+#[example("rickroll")]
 async fn enable_command(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
     let gc_manager = {
@@ -24,9 +26,11 @@ async fn enable_command(ctx: &Context, msg: &Message, mut args: Args) -> Command
     Ok(())
 }
 
-/// Disables specified command for the entire guild
+/// Disable (globally for the entire server/guild) specified command
 #[command("disable")]
+#[num_args(1)]
 #[usage("<command name>")]
+#[example("rickroll")]
 async fn disable_command(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
     let gc_manager = {
@@ -43,9 +47,11 @@ async fn disable_command(ctx: &Context, msg: &Message, mut args: Args) -> Comman
     Ok(())
 }
 
-/// Sets filteing to whitelist and sets the filter list
+/// Set what channels this command is allowed to run in
 #[command("whitelist")]
+#[min_args(1)]
 #[usage("<command name> [, channel, channel...]")]
+#[example("ping #ping-pong")]
 async fn whitelist_command(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     args.trimmed().quoted();
     let command_name = args.single::<String>()?;
@@ -65,9 +71,11 @@ async fn whitelist_command(ctx: &Context, msg: &Message, mut args: Args) -> Comm
     Ok(())
 }
 
-/// Sets filteing to whitelist and sets the filter list
+/// Set what channels this command is not allowed to run in
 #[command("blacklist")]
+#[min_args(1)]
 #[usage("<command name> [, channel, channel...]")]
+#[example("rickroll #serious-talk")]
 async fn blacklist_command(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     args.trimmed().quoted();
     let command_name = args.single::<String>()?;
@@ -87,15 +95,19 @@ async fn blacklist_command(ctx: &Context, msg: &Message, mut args: Args) -> Comm
     Ok(())
 }
 
-#[group]
+/// Commands for specifiyng where and which command can be executed.
+#[group("Configuration")]
 #[prefix("command")]
 #[only_in(guilds)]
 #[commands(enable_command, disable_command, whitelist_command, blacklist_command)]
+#[summary("Command conditions")]
 struct ConfigCommands;
 
-/// Enables specified info channel
+/// Enable specified info channel. Recommended to set a channel first.
 #[command("enable")]
+#[num_args(1)]
 #[usage("(welcome,log,mod-list)")]
+#[example("welcome")]
 async fn enable_ic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     args.trimmed().quoted();
     let ic_type = args.single::<InfoChannelType>()?;
@@ -115,9 +127,11 @@ async fn enable_ic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
     Ok(())
 }
 
-/// Enables specified info channel
+/// Disable specified info channel.
 #[command("disable")]
+#[num_args(1)]
 #[usage("(welcome,log,mod-list)")]
+#[example("log")]
 async fn disable_ic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     args.trimmed().quoted();
     let ic_type = args.single::<InfoChannelType>()?;
@@ -137,9 +151,11 @@ async fn disable_ic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
     Ok(())
 }
 
-/// Set channel for Info Channel
+/// Set channel for info channel.
 #[command("set")]
-#[usage("(welcome,log,mod-list), [channel]")]
+#[num_args(2)]
+#[usage("(welcome,log,mod-list), <channel>")]
+#[example("welcome, #welcome")]
 async fn set_ic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     args.trimmed().quoted();
     let ic_type = args.single::<InfoChannelType>()?;
@@ -160,16 +176,19 @@ async fn set_ic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     Ok(())
 }
 
-/// Control Info Channels settings
-#[group]
+/// Control Info Channels
+#[group("Info Channels")]
 #[prefix("info_channel")]
 #[only_in(guilds)]
 #[commands(enable_ic, disable_ic, set_ic)]
 struct InfoChannelsCommands;
 
-/// Set default roles
+/// Set default roles that are given to newcomers. Waits until server moderation requirements are met and member has read the rules.
+/// If no roles are specified, the list will be cleared.
 #[command]
 #[usage("[role, role...]")]
+#[example("@Newbie")]
+#[example("@Newcomer, @JustJoined")]
 async fn default_roles(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     args.trimmed().quoted();
     let roles = args.iter().quoted().trimmed().collect::<Result<Vec<RoleId>, ArgError<<RoleId as FromStr>::Err>>>()?;
@@ -189,7 +208,7 @@ async fn default_roles(ctx: &Context, msg: &Message, mut args: Args) -> CommandR
 }
 
 /// Guild-specific bot settings
-#[group]
+#[group("Server Configuration")]
 #[required_permissions(ADMINISTRATOR)]
 #[sub_groups(ConfigCommands, InfoChannelsCommands)]
 #[only_in(guilds)]

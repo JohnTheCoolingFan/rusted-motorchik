@@ -3,12 +3,15 @@ use serenity::model::channel::Message;
 use serenity::framework::standard::macros::{command, group};
 use serenity::framework::standard::CommandResult;
 
+/// You spin my head right round...
 #[command]
+#[max_args(0)]
 async fn spin(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id.say(&ctx.http, "https://www.youtube.com/watch?v=PGNiXGX2nLU").await?;
     Ok(())
 }
 
+/// Obvious.
 #[command]
 #[aliases(XcQ)]
 async fn rickroll(ctx: &Context, msg: &Message) -> CommandResult {
@@ -31,6 +34,7 @@ async fn udod_communist_2(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
+/// "Wanna play a little game of pong?")]
 async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
     let mut pong = msg.channel_id.say(&ctx.http, "pong!").await?;
     let time_diff = pong.timestamp - msg.timestamp;
@@ -44,6 +48,8 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
+/// Nothing useful
 #[group]
 #[commands(spin, rickroll, udod_communist, udod_communist_2, ping)]
+#[summary("F U N")]
 struct FunCommands;

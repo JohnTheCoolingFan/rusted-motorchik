@@ -5,6 +5,7 @@ use serenity::framework::standard::{CommandResult, Args};
 use serenity::utils::content_safe;
 use crate::content_safe_settings;
 
+/// Simply return the text that was passed to this command
 #[command]
 async fn test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let settings = content_safe_settings(msg);
@@ -13,6 +14,7 @@ async fn test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     Ok(())
 }
 
+/// Count the amount of arguments and nicely print them
 #[command]
 #[aliases(advtest, atest)]
 async fn advanced_test(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {

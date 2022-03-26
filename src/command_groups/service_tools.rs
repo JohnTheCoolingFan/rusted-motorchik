@@ -19,6 +19,7 @@ async fn say_dm(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     Ok(())
 }
 
+/// Nothing for you
 #[group]
 #[owners_only]
 #[commands(say, say_dm)]

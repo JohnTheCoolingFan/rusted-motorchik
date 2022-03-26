@@ -8,18 +8,21 @@ use chrono::offset::Utc;
 const GITHUB_URL: &str = "https://github.com/JohnTheCoolingFan/rusted-motorchik";
 const GITLAB_URL: &str = "Sorry, not available yet";
 
+/// Send GitHub source link
 #[command]
 async fn github(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id.say(&ctx.http, GITHUB_URL).await?;
     Ok(())
 }
 
+/// Send GitLab source link
 #[command]
 async fn gitlab(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id.say(&ctx.http, GITLAB_URL).await?;
     Ok(())
 }
 
+/// Send source code links
 #[command]
 async fn source(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id.say(&ctx.http, format!("Choose whichever you want:\nGitHub: {}\nGitLab: {}", GITHUB_URL, GITLAB_URL)).await?;
@@ -27,6 +30,7 @@ async fn source(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 // TODO: Motorchik version, compiler version, etc
+/// Info about host on which this bot is currently running
 #[command]
 async fn hostinfo(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id.send_message(&ctx.http, |m| {
@@ -62,7 +66,8 @@ async fn hostinfo(ctx: &Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
-// I'm not bringing "f***discord" command because it's about python.
+// I'm not bringing "f***discord" command because it's about python and not quite relevant anymore...
+/// Nothing of much interest
 #[group]
 #[commands(github, gitlab, source, hostinfo)]
 struct Miscellaneous;
