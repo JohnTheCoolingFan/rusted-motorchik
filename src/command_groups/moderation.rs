@@ -50,5 +50,5 @@ async fn ban(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 // Other commands require InfoChannels functionality to function as intended.
 
 #[group]
-#[commands(clearchat, kick)]
+#[commands(clearchat, kick, ban)]
 struct Moderation;
