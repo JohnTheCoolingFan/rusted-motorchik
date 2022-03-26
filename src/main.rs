@@ -1,6 +1,5 @@
 mod command_groups;
 mod guild_config;
-mod role_queue;
 
 use command_groups::*;
 
@@ -20,10 +19,15 @@ use serenity::framework::standard::{macros::{help, hook}, help_commands};
 use serenity::utils::ContentSafeOptions;
 use serenity::http::Http;
 use guild_config::{GuildConfigManager, InfoChannelType};
-use role_queue::RoleQueue;
 
 const ROLE_QUEUE_INTERVAL: Duration = Duration::from_secs(30); // 30 seconds
 const MOD_LIST_UPDATE_INTERVAL: Duration = Duration::from_secs(60 * 60); // 1 hour
+
+pub struct RoleQueue;
+
+impl TypeMapKey for RoleQueue {
+    type Value = Arc<RwLock<Vec<(GuildId, UserId)>>>;
+}
 
 pub fn content_safe_settings(msg: &Message) -> ContentSafeOptions {
     match &msg.guild_id {
