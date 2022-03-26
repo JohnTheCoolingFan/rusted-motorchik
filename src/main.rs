@@ -36,6 +36,30 @@ struct Handler {
     is_loop_running: AtomicBool
 }
 
+impl Handler {
+    async fn log_channel_ban_message(&self, ctx: &Context, guild_id: GuildId, user: &User, banned_by: Option<&User>) {
+        let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
+        let guild_cached = guild_id.to_guild_cached(&ctx).await.unwrap();
+        if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
+            if let Some(log_ic_data) = guild_config.read().await.info_channels_data(InfoChannelType::Log) {
+                if log_ic_data.enabled {
+                    let channel = log_ic_data.channel_id;
+                    if let Ok(bans) = guild_cached.bans(ctx).await {
+                        for ban in bans {
+                            if &ban.user == user {
+                                let reason = ban.reason.map(|r| format!("Reason: {}", r)).unwrap_or_else(|| "Reason was not provided".into());
+                                if let Err(why) = channel.say(ctx, format!("User {} was banned.\n{}", user, reason)).await {
+                                    println!("Error sending a ban log message: {}", why);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[async_trait]
 impl EventHandler for Handler {
     // Print account info
@@ -140,6 +164,11 @@ impl EventHandler for Handler {
                 }
             }
         }
+    }
+
+    // Member was banned (by anyone, including this bot)
+    async fn guild_ban_addition(&self, ctx: Context, guild_id: GuildId, banned_user: User) {
+        self.log_channel_ban_message(&ctx, guild_id, &banned_user, None).await;
     }
 }
 
