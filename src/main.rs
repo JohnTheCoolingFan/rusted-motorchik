@@ -162,7 +162,7 @@ async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result:
         if let Err(why_echo) = msg.channel_id.send_message(&ctx.http, |m| {
             m.add_embed(|e| {
                 e.color((255, 15, 15))
-                    .title("Error duting running a command")
+                    .title("Error during running a command")
                     .description(format!("Error occured while running command `{}`:\n{}", command_name, why))
                     .footer(|f| {
                         f.text("Please contact bot author on github/gitlab/discord, see `source` command")
