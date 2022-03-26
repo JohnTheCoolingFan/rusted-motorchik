@@ -241,7 +241,17 @@ async fn my_help(ctx: &Context, msg: &Message, args: Args, hopt: &'static HelpOp
     Ok(())
 }
 
-// TODO: hook before to check command filters
+#[hook]
+async fn before(ctx: &Context, msg: &Message, cmd_name: &str) -> bool {
+    let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
+    let guild_cached = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
+    if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
+        let guild_config_read = guild_config.read().await;
+        let command_filter = guild_config_read.get_command_filter(cmd_name).await;
+        return command_filter.read().await.can_run(msg.channel_id).is_ok();
+    }
+    true
+}
 
 #[hook]
 async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result: CommandResult) {
