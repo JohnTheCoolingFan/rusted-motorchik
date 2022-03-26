@@ -23,7 +23,7 @@ use guild_config::{GuildConfigManager, InfoChannelType};
 use role_queue::RoleQueue;
 
 const ROLE_QUEUE_INTERVAL: Duration = Duration::from_secs(30); // 30 seconds
-const MOD_LIST_UPDATE_INTERVAL: Duration = Duration::from_secs(10); // 1 hour
+const MOD_LIST_UPDATE_INTERVAL: Duration = Duration::from_secs(60 * 60); // 1 hour
 
 pub fn content_safe_settings(msg: &Message) -> ContentSafeOptions {
     match &msg.guild_id {
