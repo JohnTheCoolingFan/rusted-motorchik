@@ -1,8 +1,9 @@
-use serenity::client::Context;
-use serenity::model::channel::Message;
+use serenity::prelude::*;
+use serenity::model::prelude::*;
 use serenity::framework::standard::macros::{command, group};
 use serenity::framework::standard::{CommandResult, Args};
 use std::time::Duration;
+use crate::Handler;
 
 #[command]
 #[aliases(clear, cl)]
@@ -19,8 +20,20 @@ async fn clearchat(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
     Ok(())
 }
 
+#[command]
+#[required_permissions(KICK_MEMBERS)]
+async fn kick(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let user = args.single::<UserId>()?;
+    let reason = match args.is_empty() {
+        true => None,
+        false => Some(args.single::<String>()?)
+    };
+    Handler::log_channel_kick_message(ctx, msg.guild_id.unwrap(), &user, &msg.author, reason).await;
+    Ok(())
+}
+
 // Other commands require InfoChannels functionality to function as intended.
 
 #[group]
-#[commands(clearchat)]
+#[commands(clearchat, kick)]
 struct Moderation;
