@@ -306,15 +306,15 @@ impl CommandFilter {
             CommandDisability::None => Ok(CommandDisability::None),
             CommandDisability::Global => Err(CommandDisability::Global),
             CommandDisability::Blacklisted => {
-                match self.filter_list().binary_search(&channel_id) {
-                    Ok(_) => Err(CommandDisability::Blacklisted),
-                    Err(_) => Ok(CommandDisability::Blacklisted)
+                match self.filter_list().contains(&channel_id) {
+                    true => Err(CommandDisability::Blacklisted),
+                    false => Ok(CommandDisability::Blacklisted)
                 }
             },
             CommandDisability::Whitelisted => {
-                match self.filter_list().binary_search(&channel_id) {
-                    Ok(_) => Ok(CommandDisability::Whitelisted),
-                    Err(_) => Err(CommandDisability::Whitelisted)
+                match self.filter_list().contains(&channel_id) {
+                    true => Ok(CommandDisability::Whitelisted),
+                    false => Err(CommandDisability::Whitelisted)
                 }
             }
         }
