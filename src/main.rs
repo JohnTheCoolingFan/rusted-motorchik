@@ -22,6 +22,7 @@ use guild_config::{GuildConfigManager, InfoChannelType};
 
 const ROLE_QUEUE_INTERVAL: Duration = Duration::from_secs(30); // 30 seconds
 const MOD_LIST_UPDATE_INTERVAL: Duration = Duration::from_secs(60 * 60); // 1 hour
+const ERROR_EMBED_COLOR: (u8, u8, u8) = (255, 15, 15);
 
 pub struct RoleQueue;
 
@@ -249,7 +250,7 @@ async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result:
         println!("Command '{}' returned error {}", command_name, why);
         if let Err(why_echo) = msg.channel_id.send_message(&ctx.http, |m| {
             m.add_embed(|e| {
-                e.color((255, 15, 15))
+                e.color(ERROR_EMBED_COLOR)
                     .title("Error executing a command")
                     .description(format!("Error occured while running command `{}`:\n{}", command_name, why))
                     .footer(|f| {
