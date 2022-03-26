@@ -13,13 +13,23 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum_macros::{EnumString, AsRefStr, EnumIter};
 use strum::IntoEnumIterator;
 
-#[derive(EnumString, AsRefStr, Hash, Eq, PartialEq, Clone, Copy, Deserialize, Serialize, EnumIter)]
+#[cfg(test)]
+use std::str::FromStr;
+
+#[derive(Debug, EnumString, AsRefStr, Hash, Eq, PartialEq, Clone, Copy, Deserialize, Serialize, EnumIter)]
 #[serde(rename_all = "kebab-case")]
 #[strum(serialize_all = "kebab-case")]
 pub enum InfoChannelType {
     Welcome,
     Log,
     ModList
+}
+
+#[test]
+fn info_channel_type_parse() {
+    assert_eq!(InfoChannelType::Welcome, InfoChannelType::from_str("welcome").unwrap());
+    assert_eq!(InfoChannelType::Log, InfoChannelType::from_str("log").unwrap());
+    assert_eq!(InfoChannelType::ModList, InfoChannelType::from_str("mod-list").unwrap());
 }
 
 #[repr(u8)]
