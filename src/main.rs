@@ -37,6 +37,22 @@ struct Handler {
 }
 
 impl Handler {
+    async fn log_channel_kick_message(&self, ctx: &Context, guild_id: GuildId, user: &UserId, kicked_by: &User, kick_reason: Option<String>) {
+        let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
+        let guild_cached = guild_id.to_guild_cached(&ctx).await.unwrap();
+        if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
+            if let Some(log_ic_data) = guild_config.read().await.info_channels_data(InfoChannelType::Log) {
+                if log_ic_data.enabled {
+                    let channel = log_ic_data.channel_id;
+                    let reason = kick_reason.map(|r| format!("Reason: {}", r)).unwrap_or_else(|| "Reason was not provided".into());
+                    if let Err(why) = channel.say(ctx, format!("User {} was kicked by {}.\n{}", user, kicked_by, reason)).await {
+                        println!("Error sending kick log message: {}", why);
+                    }
+                }
+            }
+        }
+    }
+
     async fn log_channel_ban_message(&self, ctx: &Context, guild_id: GuildId, user: &User, banned_by: Option<&User>, ban_reason: Option<String>) {
         let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
         let guild_cached = guild_id.to_guild_cached(&ctx).await.unwrap();
