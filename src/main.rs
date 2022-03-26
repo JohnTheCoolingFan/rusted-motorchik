@@ -37,7 +37,7 @@ struct Handler {
 }
 
 impl Handler {
-    async fn log_channel_kick_message(&self, ctx: &Context, guild_id: GuildId, user: &UserId, kicked_by: &User, kick_reason: Option<String>) {
+    async fn log_channel_kick_message(ctx: &Context, guild_id: GuildId, user: &UserId, kicked_by: &User, kick_reason: Option<String>) {
         let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
         let guild_cached = guild_id.to_guild_cached(&ctx).await.unwrap();
         if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
@@ -53,7 +53,7 @@ impl Handler {
         }
     }
 
-    async fn log_channel_ban_message(&self, ctx: &Context, guild_id: GuildId, user: &User, banned_by: Option<&User>, ban_reason: Option<String>) {
+    async fn log_channel_ban_message(ctx: &Context, guild_id: GuildId, user: &User, banned_by: Option<&User>, ban_reason: Option<String>) {
         let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
         let guild_cached = guild_id.to_guild_cached(&ctx).await.unwrap();
         if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
@@ -186,7 +186,7 @@ impl EventHandler for Handler {
 
     // Member was banned (by anyone, including this bot)
     async fn guild_ban_addition(&self, ctx: Context, guild_id: GuildId, banned_user: User) {
-        self.log_channel_ban_message(&ctx, guild_id, &banned_user, None, None).await;
+        Self::log_channel_ban_message(&ctx, guild_id, &banned_user, None, None).await;
     }
 }
 
