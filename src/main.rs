@@ -243,7 +243,6 @@ async fn my_help(ctx: &Context, msg: &Message, args: Args, hopt: &'static HelpOp
 
 // TODO: hook before to check command filters
 
-// TODO: send the error in a message and print if sending in message failed
 #[hook]
 async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result: CommandResult) {
     if let Err(why) = command_result {
