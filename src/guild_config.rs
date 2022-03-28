@@ -301,7 +301,7 @@ pub struct CommandFilter {
 }
 
 impl CommandFilter {
-    pub fn can_run(&self, channel_id: ChannelId) -> Result<CommandDisability, CommandDisability> {
+    pub fn can_run(&self, channel_id: ChannelId) -> std::result::Result<CommandDisability, CommandDisability> {
         match self.filter_type() {
             CommandDisability::None => Ok(CommandDisability::None),
             CommandDisability::Global => Err(CommandDisability::Global),
