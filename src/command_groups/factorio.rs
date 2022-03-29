@@ -4,7 +4,7 @@ use serenity::prelude::*;
 use serenity::model::prelude::*;
 use serenity::builder::{Timestamp, CreateEmbed};
 use serenity::framework::standard::macros::{command, group};
-use serenity::framework::standard::{CommandResult, Args};
+use serenity::framework::standard::{CommandResult, Args, CommandError};
 use scraper::{Html, Selector};
 use reqwest::{self, StatusCode};
 use serde::Deserialize;
@@ -96,24 +96,24 @@ async fn modlist(ctx: &Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
-pub async fn scheduled_modlist(ctx: &Context, channel: ChannelId) -> CommandResult {
+pub async fn scheduled_modlist(ctx: &Context, channel: ChannelId) -> std::result::Result<Vec<(String, MessageId)>, CommandError> {
+    let mut result = Vec::new();
     for mod_name in MOD_LIST {
-        process_mod(ctx, channel, mod_name).await?;
+        result.push((mod_name.into(), process_mod(ctx, channel, mod_name).await?));
     }
-    Ok(())
+    Ok(result)
 }
 
-async fn process_mod(ctx: &Context, channel: ChannelId, mod_name: &str) -> CommandResult {
+async fn process_mod(ctx: &Context, channel: ChannelId, mod_name: &str) -> std::result::Result<MessageId, CommandError> {
     let mod_data = get_mod_info(ctx, mod_name).await;
-    channel.send_message(&ctx.http, |m| m.embed(|e| {
+    Ok(channel.send_message(&ctx.http, |m| m.embed(|e| {
         match mod_data {
             Ok(data) => construct_mod_embed(e, data),
             Err(_) => e.title("Mod not found")
                 .description(format!("Failed to find {}", mod_name))
                 .color(FAILED_EMBED_COLOR)
         }
-    })).await?;
-    Ok(())
+    })).await?.id)
 }
 
 fn construct_mod_embed(e: &mut CreateEmbed, data: ModData) -> &mut CreateEmbed {
