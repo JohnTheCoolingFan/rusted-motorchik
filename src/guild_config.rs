@@ -200,7 +200,7 @@ impl GuildConfig {
             info_channels: {
                 let mut result: HashMap<InfoChannelType, InfoChannelData> = HashMap::new();
                 for (k, v) in &self.info_channels {
-                    result.insert(k.clone(), v.read().await.clone());
+                    result.insert(*k, v.read().await.clone());
                 }
                 result
             },
