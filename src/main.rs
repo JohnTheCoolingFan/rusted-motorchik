@@ -122,12 +122,12 @@ impl EventHandler for Handler {
                 loop {
                     let queue = Arc::clone(ctx1.data.read().await.get::<RoleQueue>().unwrap());
                     let mut new_queue: Vec<(GuildId, UserId)> = Vec::with_capacity(queue.read().await.len());
+                    let gc_manager = Arc::clone(ctx1.data.read().await.get::<GuildConfigManager>().unwrap());
                     for item in &*queue.read().await {
                         if let Ok(mut member) = item.0.member(Arc::clone(&ctx1.http), item.1).await {
                             if member.pending {
                                 new_queue.push(*item)
                             } else {
-                                let gc_manager = Arc::clone(ctx1.data.read().await.get::<GuildConfigManager>().unwrap());
                                 let guild_cached = member.guild_id.to_guild_cached(&ctx1).await.unwrap();
                                 if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
                                     if let Err(why) = member.add_roles(&ctx1, guild_config.read().await.default_roles()).await {
