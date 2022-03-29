@@ -136,21 +136,26 @@ impl GuildConfig {
         GuildConfigData {
             default_roles: self.default_roles.clone(),
             info_channels: {
-                let mut result: HashMap<InfoChannelType, InfoChannelData> = HashMap::new();
-                for (k, v) in &self.info_channels {
-                    result.insert(*k, v.read().await.clone());
-                }
-                result
+                Self::unwrap_hashmap_arcrwlock(&self.info_channels).await
             },
             command_filters: {
                 let command_filters = self.cf_cache.read().await;
-                let mut result: HashMap<String, CommandFilter> = HashMap::new();
-                for (k, v) in &*command_filters {
-                    result.insert(k.clone(), v.read().await.clone());
-                }
-                result
+                Self::unwrap_hashmap_arcrwlock(&*command_filters).await
             }
         }
+    }
+
+    /// Helper function to unwrap when writing
+    async fn unwrap_hashmap_arcrwlock<K, V>(hashmap: &HashMap<K, Arc<RwLock<V>>>) -> HashMap<K, V>
+    where
+        K: Clone + Eq + Hash,
+        V: Clone,
+    {
+        let mut result: HashMap<K, V> = HashMap::new();
+        for (k, v) in hashmap {
+            result.insert(k.clone(), v.read().await.clone());
+        }
+        result
     }
 
     /// Edit this GuildConfig
