@@ -53,13 +53,13 @@ impl Handler {
         let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
         let guild_cached = guild_id.to_guild_cached(&ctx).await.unwrap();
         if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
-            if let Some(log_ic_data) = guild_config.read().await.info_channels_data(InfoChannelType::Log) {
-                if log_ic_data.enabled {
-                    let channel = log_ic_data.channel_id;
-                    let reason = kick_reason.map(|r| format!("Reason: {}", r)).unwrap_or_else(|| "Reason was not provided".into());
-                    if let Err(why) = channel.say(ctx, format!("User {} was kicked by {}.\n{}", user, kicked_by, reason)).await {
-                        println!("Error sending kick log message: {}", why);
-                    }
+            let log_ic_data_arc = guild_config.read().await.info_channels_data(InfoChannelType::Log);
+            let log_ic_data = log_ic_data_arc.read().await;
+            if log_ic_data.enabled {
+                let channel = log_ic_data.channel_id;
+                let reason = kick_reason.map(|r| format!("Reason: {}", r)).unwrap_or_else(|| "Reason was not provided".into());
+                if let Err(why) = channel.say(ctx, format!("User {} was kicked by {}.\n{}", user, kicked_by, reason)).await {
+                    println!("Error sending kick log message: {}", why);
                 }
             }
         }
@@ -69,19 +69,19 @@ impl Handler {
         let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
         let guild_cached = guild_id.to_guild_cached(&ctx).await.unwrap();
         if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
-            if let Some(log_ic_data) = guild_config.read().await.info_channels_data(InfoChannelType::Log) {
-                if log_ic_data.enabled {
-                    let channel = log_ic_data.channel_id;
-                    if let Ok(bans) = guild_cached.bans(ctx).await {
-                        for ban in bans {
-                            if &ban.user == user {
-                                let reason = ban_reason.unwrap_or_else(|| ban.reason.map(|r| format!("Reason: {}", r)).unwrap_or_else(|| "Reason was not provided".into()));
-                                let ban_issued_by = banned_by.map(|bby| format!(" by {}", bby)).unwrap_or_else(String::new);
-                                if let Err(why) = channel.say(ctx, format!("User {} was banned{}.\n{}", user, ban_issued_by, reason)).await {
-                                    println!("Error sending a ban log message: {}", why);
-                                }
-                                break;
+            let log_ic_data_arc = guild_config.read().await.info_channels_data(InfoChannelType::Log);
+            let log_ic_data = log_ic_data_arc.read().await;
+            if log_ic_data.enabled {
+                let channel = log_ic_data.channel_id;
+                if let Ok(bans) = guild_cached.bans(ctx).await {
+                    for ban in bans {
+                        if &ban.user == user {
+                            let reason = ban_reason.unwrap_or_else(|| ban.reason.map(|r| format!("Reason: {}", r)).unwrap_or_else(|| "Reason was not provided".into()));
+                            let ban_issued_by = banned_by.map(|bby| format!(" by {}", bby)).unwrap_or_else(String::new);
+                            if let Err(why) = channel.say(ctx, format!("User {} was banned{}.\n{}", user, ban_issued_by, reason)).await {
+                                println!("Error sending a ban log message: {}", why);
                             }
+                            break;
                         }
                     }
                 }
@@ -154,17 +154,17 @@ impl EventHandler for Handler {
                     for guild in guilds {
                         if let Some(guild_cached) = guild.to_guild_cached(&ctx2).await {
                             if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
-                                if let Some(mod_list_ic_data) = guild_config.read().await.info_channels_data(InfoChannelType::ModList) {
-                                    if mod_list_ic_data.enabled {
-                                        let channel = mod_list_ic_data.channel_id;
-                                        if let Ok(messages) = channel.messages(&ctx2, |gm| gm.limit(MOD_LIST.len() as u64)).await {
-                                            if let Err(why) = channel.delete_messages(&ctx2, messages).await {
-                                                println!("Failed to update mod list at guild {} in channel {} due to a folloeing error: {}", guild, channel, why);
-                                            }
-                                        };
-                                        if let Err(why) = scheduled_modlist(ctx2.as_ref(), channel).await {
-                                            println!("Failed to send mod list in guild {}, channel {} due to a following error: {}", guild, channel, why);
+                                let mod_list_ic_data_arc = guild_config.read().await.info_channels_data(InfoChannelType::ModList);
+                                let mod_list_ic_data = mod_list_ic_data_arc.read().await;
+                                if mod_list_ic_data.enabled {
+                                    let channel = mod_list_ic_data.channel_id;
+                                    if let Ok(messages) = channel.messages(&ctx2, |gm| gm.limit(MOD_LIST.len() as u64)).await {
+                                        if let Err(why) = channel.delete_messages(&ctx2, messages).await {
+                                            println!("Failed to update mod list at guild {} in channel {} due to a folloeing error: {}", guild, channel, why);
                                         }
+                                    };
+                                    if let Err(why) = scheduled_modlist(ctx2.as_ref(), channel).await {
+                                        println!("Failed to send mod list in guild {}, channel {} due to a following error: {}", guild, channel, why);
                                     }
                                 }
                             }
@@ -191,12 +191,12 @@ impl EventHandler for Handler {
                     println!("Failed to give roles to member {} of guild {}: {}", new_member.user.id, guild_id, why);
                 }
             }
-            if let Some(welcome_ic_data) = guild_config.read().await.info_channels_data(InfoChannelType::Welcome) {
-                if welcome_ic_data.enabled {
-                    let channel = welcome_ic_data.channel_id;
-                    if let Err(why) = channel.say(&ctx, format!("Welcome, {}!", new_member.mention())).await {
-                        println!("Failed to greet member {} in guild {} due to a following error: {}", new_member, guild_id, why);
-                    }
+            let welcome_ic_data_arc = guild_config.read().await.info_channels_data(InfoChannelType::Welcome);
+            let welcome_ic_data = welcome_ic_data_arc.read().await;
+            if welcome_ic_data.enabled {
+                let channel = welcome_ic_data.channel_id;
+                if let Err(why) = channel.say(&ctx, format!("Welcome, {}!", new_member.mention())).await {
+                    println!("Failed to greet member {} in guild {} due to a following error: {}", new_member, guild_id, why);
                 }
             }
         }
@@ -207,12 +207,12 @@ impl EventHandler for Handler {
         let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
         let guild_cached = guild_id.to_guild_cached(&ctx).await.unwrap();
         if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
-            if let Some(welcome_ic_data) = guild_config.read().await.info_channels_data(InfoChannelType::Welcome) {
-                if welcome_ic_data.enabled {
-                    let channel = welcome_ic_data.channel_id;
-                    if let Err(why) = channel.say(&ctx, format!("Goodbye, {}", user.name)).await {
-                        println!("Failed to say goodbye to user {} who left guild {} due to a folloeing error: {}", user, guild_id, why);
-                    }
+            let welcome_ic_data_arc = guild_config.read().await.info_channels_data(InfoChannelType::Welcome);
+            let welcome_ic_data = welcome_ic_data_arc.read().await;
+            if welcome_ic_data.enabled {
+                let channel = welcome_ic_data.channel_id;
+                if let Err(why) = channel.say(&ctx, format!("Goodbye, {}", user.name)).await {
+                    println!("Failed to say goodbye to user {} who left guild {} due to a folloeing error: {}", user, guild_id, why);
                 }
             }
         }
