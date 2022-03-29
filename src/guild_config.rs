@@ -90,7 +90,7 @@ pub struct GuildConfig {
     cf_cache: RwLock<HashMap<String, Arc<RwLock<CommandFilter>>>>,
     config_path: PathBuf,
     default_roles: Vec<RoleId>,
-    info_channels: HashMap<InfoChannelType, InfoChannelData>,
+    info_channels: HashMap<InfoChannelType, Arc<RwLock<InfoChannelData>>>,
 }
 
 impl GuildConfig {
@@ -100,8 +100,8 @@ impl GuildConfig {
     }
     
     /// Accessor
-    pub fn info_channels_data(&self, info_channel: InfoChannelType) -> Option<&InfoChannelData> {
-        self.info_channels.get(&info_channel)
+    pub fn info_channels_data(&self, info_channel: InfoChannelType) -> Arc<RwLock<InfoChannelData>> {
+        Arc::clone(self.info_channels.get(&info_channel).unwrap())
     }
 
     /// Get command filter
@@ -121,7 +121,7 @@ impl GuildConfig {
                 self.default_roles = def_roles;
             }
             for ic_edit in edit_guild_config.info_channels {
-                let ic_data = self.info_channels.get_mut(&ic_edit.0).unwrap();
+                let mut ic_data = self.info_channels.get(&ic_edit.0).unwrap().write().await;
                 if let Some(state) = ic_edit.1.state {
                     ic_data.enabled = state
                 }
@@ -188,14 +188,22 @@ impl GuildConfig {
                     data.command_filters.drain().map(|(k, cf)| (k, Arc::new(RwLock::new(cf))))
                     )),
             default_roles: data.default_roles,
-            info_channels: data.info_channels
+            info_channels: HashMap::from_iter(
+                data.info_channels.drain().map(|(k, ic_data)| (k, Arc::new(RwLock::new(ic_data))))
+                )
         }
     }
 
     async fn to_data(&self) -> GuildConfigData {
         GuildConfigData {
             default_roles: self.default_roles.clone(),
-            info_channels: self.info_channels.clone(),
+            info_channels: {
+                let mut result: HashMap<InfoChannelType, InfoChannelData> = HashMap::new();
+                for (k, v) in &self.info_channels {
+                    result.insert(k.clone(), v.read().await.clone());
+                }
+                result
+            },
             command_filters: {
                 let command_filters = self.cf_cache.read().await;
                 let mut result: HashMap<String, CommandFilter> = HashMap::new();
