@@ -56,6 +56,7 @@ impl TypeMapKey for GuildConfigManager {
 }
 
 impl GuildConfigManager {
+    /// Inititalise GuildConfigManager
     pub fn new(path: impl Into<PathBuf>) -> Self {
         let path = path.into();
         println!("Guild config home: {:?}", path);
@@ -66,6 +67,7 @@ impl GuildConfigManager {
         Self{gc_cache: RwLock::new(HashMap::new()), config_path: path}
     }
 
+    /// Get guild config from manager
     pub async fn get_guild_config(&self, guild: &Guild) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
         if !self.is_cached(guild.id).await {
             let mut gc_cache = self.gc_cache.write().await;
@@ -79,11 +81,15 @@ impl GuildConfigManager {
         Ok(Arc::clone(gc_cache.get(&guild.id).unwrap()))
     }
 
+    /// Check if GuildCofnig is loaded into cache
     async fn is_cached(&self, guild_id: GuildId) -> bool {
         let gc_cache = self.gc_cache.read().await;
         gc_cache.contains_key(&guild_id)
     }
 
+    /// Get GuildConfig with just a Context and guild id.
+    /// Re-retrieves guild config manager for each call, if multiple guill configs are needed,
+    /// better to use get_guild_config instead
     pub async fn get_guild_config_from_ctx(ctx: &Context, guild: GuildId) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
         let guild_cached = guild.to_guild_cached(ctx).await.unwrap();
         let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
@@ -124,6 +130,7 @@ impl GuildConfig {
         Ok(())
     }
 
+    /// Create GuildConfig from deserialized data
     fn from_data(data: GuildConfigData, guild_id: GuildId, path: PathBuf) -> Self {
         Self {
             guild_id,
@@ -134,6 +141,8 @@ impl GuildConfig {
         }
     }
 
+    /// Helper function to wrap deserialized data in Arc<RwLock<>> (serde does not support tokio's
+    /// async RwLock, sadly) 
     fn hashmap_wrap_arcrwlock<K, V>(mut hashmap: HashMap<K, V>) -> HashMap<K, Arc<RwLock<V>>>
     where
         K: Eq + Hash,
@@ -141,6 +150,7 @@ impl GuildConfig {
         HashMap::from_iter(hashmap.drain().map(|(k, v)| (k, Arc::new(RwLock::new(v)))))
     }
 
+    /// Create data object that can be easily serialized
     async fn to_data(&self) -> GuildConfigData {
         GuildConfigData {
             default_roles: self.default_roles.clone(),
