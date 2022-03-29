@@ -118,18 +118,21 @@ impl GuildConfig {
         Ok(())
     }
 
-    fn from_data(mut data: GuildConfigData, guild_id: GuildId, path: PathBuf) -> Self {
+    fn from_data(data: GuildConfigData, guild_id: GuildId, path: PathBuf) -> Self {
         Self {
             guild_id,
             config_path: path,
-            cf_cache: RwLock::new(HashMap::from_iter(
-                    data.command_filters.drain().map(|(k, cf)| (k, Arc::new(RwLock::new(cf))))
-                    )),
+            cf_cache: RwLock::new(Self::hashmap_wrap_arcrwlock(data.command_filters)),
             default_roles: data.default_roles,
-            info_channels: HashMap::from_iter(
-                data.info_channels.drain().map(|(k, ic_data)| (k, Arc::new(RwLock::new(ic_data))))
-                )
+            info_channels: Self::hashmap_wrap_arcrwlock(data.info_channels)
         }
+    }
+
+    fn hashmap_wrap_arcrwlock<K, V>(mut hashmap: HashMap<K, V>) -> HashMap<K, Arc<RwLock<V>>>
+    where
+        K: Eq + Hash,
+    {
+        HashMap::from_iter(hashmap.drain().map(|(k, v)| (k, Arc::new(RwLock::new(v)))))
     }
 
     async fn to_data(&self) -> GuildConfigData {
