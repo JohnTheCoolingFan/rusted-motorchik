@@ -101,7 +101,7 @@ pub struct GuildConfig {
     pub guild_id: GuildId,
     cf_cache: RwLock<HashMap<String, Arc<RwLock<CommandFilter>>>>,
     config_path: PathBuf,
-    pub mod_list_messages: Vec<(String, MessageId)>,
+    pub mod_list_messages: Arc<Vec<(String, MessageId)>>,
     default_roles: Vec<RoleId>,
     info_channels: HashMap<InfoChannelType, Arc<RwLock<InfoChannelData>>>,
 }
@@ -137,7 +137,7 @@ impl GuildConfig {
             guild_id,
             config_path: path,
             cf_cache: RwLock::new(Self::hashmap_wrap_arcrwlock(data.command_filters)),
-            mod_list_messages: data.mod_list_messages,
+            mod_list_messages: Arc::new(data.mod_list_messages),
             default_roles: data.default_roles,
             info_channels: Self::hashmap_wrap_arcrwlock(data.info_channels)
         }
@@ -155,7 +155,7 @@ impl GuildConfig {
     /// Create data object that can be easily serialized
     async fn to_data(&self) -> GuildConfigData {
         GuildConfigData {
-            mod_list_messages: self.mod_list_messages.clone(),
+            mod_list_messages: Vec::clone(&self.mod_list_messages),
             default_roles: self.default_roles.clone(),
             info_channels: {
                 Self::unwrap_hashmap_arcrwlock(&self.info_channels).await
