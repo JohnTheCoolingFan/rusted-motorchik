@@ -94,20 +94,63 @@ pub struct GuildConfig {
 }
 
 impl GuildConfig {
-    /// Accessor
-    pub fn default_roles(&self) -> &Vec<RoleId> {
-        &self.default_roles
-    }
-    
-    /// Accessor
-    pub fn info_channels_data(&self, info_channel: InfoChannelType) -> Arc<RwLock<InfoChannelData>> {
-        Arc::clone(self.info_channels.get(&info_channel).unwrap())
+    /// Create new instance of GuildConfig
+    async fn new(guild: &Guild, config_path: &Path) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        let guild_config_data = GuildConfigData::new(guild.system_channel_id.unwrap_or(ChannelId(0)));
+        let path = config_path.join(format!("guild_{}.json", guild.id));
+        let mut result = Self::from_data(guild_config_data, guild.id, path);
+        result.write().await?;
+        Ok(result)
     }
 
-    /// Get command filter
-    pub async fn get_command_filter(&self, command_name: &str) -> Arc<RwLock<CommandFilter>> {
-        let cf_cache = self.cf_cache.read().await;
-        Arc::clone(cf_cache.get(command_name).unwrap())
+    /// Read GuildConfig data from file and create Self
+    fn read(guild_id: GuildId, config_path: &Path) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        let path = config_path.join(format!("guild_{}.json", guild_id));
+        let file = File::open(&path)?;
+        let data = serde_json::from_reader(file)?;
+        Ok(Self::from_data(data, guild_id, path))
+    }
+
+    /// Write GuildConfig to disk
+    async fn write(&mut self) -> Result<(), Box<dyn Error + Send + Sync>> {
+        let file = File::create(&self.config_path)?;
+        serde_json::to_writer(file, &self.to_data().await)?;
+        Ok(())
+    }
+
+    fn from_data(mut data: GuildConfigData, guild_id: GuildId, path: PathBuf) -> Self {
+        Self {
+            guild_id,
+            config_path: path,
+            cf_cache: RwLock::new(HashMap::from_iter(
+                    data.command_filters.drain().map(|(k, cf)| (k, Arc::new(RwLock::new(cf))))
+                    )),
+            default_roles: data.default_roles,
+            info_channels: HashMap::from_iter(
+                data.info_channels.drain().map(|(k, ic_data)| (k, Arc::new(RwLock::new(ic_data))))
+                )
+        }
+    }
+
+    async fn to_data(&self) -> GuildConfigData {
+        GuildConfigData {
+            default_roles: self.default_roles.clone(),
+            info_channels: {
+                let mut result: HashMap<InfoChannelType, InfoChannelData> = HashMap::new();
+                for (k, v) in &self.info_channels {
+                    result.insert(*k, v.read().await.clone());
+                }
+                result
+            },
+            command_filters: {
+                let command_filters = self.cf_cache.read().await;
+                let mut result: HashMap<String, CommandFilter> = HashMap::new();
+                for (k, v) in &*command_filters {
+                    result.insert(k.clone(), v.read().await.clone());
+                }
+                result
+            }
+        }
     }
 
     /// Edit this GuildConfig
@@ -156,63 +199,20 @@ impl GuildConfig {
         }
     }
 
-    /// Create new instance of GuildConfig
-    async fn new(guild: &Guild, config_path: &Path) -> Result<Self, Box<dyn Error + Send + Sync>> {
-        let guild_config_data = GuildConfigData::new(guild.system_channel_id.unwrap_or(ChannelId(0)));
-        let path = config_path.join(format!("guild_{}.json", guild.id));
-        let mut result = Self::from_data(guild_config_data, guild.id, path);
-        result.write().await?;
-        Ok(result)
+    /// Accessor
+    pub fn default_roles(&self) -> &Vec<RoleId> {
+        &self.default_roles
+    }
+    
+    /// Accessor
+    pub fn info_channels_data(&self, info_channel: InfoChannelType) -> Arc<RwLock<InfoChannelData>> {
+        Arc::clone(self.info_channels.get(&info_channel).unwrap())
     }
 
-    /// Write GuildConfig to disk
-    async fn write(&mut self) -> Result<(), Box<dyn Error + Send + Sync>> {
-        let file = File::create(&self.config_path)?;
-        serde_json::to_writer(file, &self.to_data().await)?;
-        Ok(())
-    }
-
-    /// Read GuildConfig data from file and create Self
-    fn read(guild_id: GuildId, config_path: &Path) -> Result<Self, Box<dyn Error + Send + Sync>> {
-        let path = config_path.join(format!("guild_{}.json", guild_id));
-        let file = File::open(&path)?;
-        let data = serde_json::from_reader(file)?;
-        Ok(Self::from_data(data, guild_id, path))
-    }
-
-    fn from_data(mut data: GuildConfigData, guild_id: GuildId, path: PathBuf) -> Self {
-        Self {
-            guild_id,
-            config_path: path,
-            cf_cache: RwLock::new(HashMap::from_iter(
-                    data.command_filters.drain().map(|(k, cf)| (k, Arc::new(RwLock::new(cf))))
-                    )),
-            default_roles: data.default_roles,
-            info_channels: HashMap::from_iter(
-                data.info_channels.drain().map(|(k, ic_data)| (k, Arc::new(RwLock::new(ic_data))))
-                )
-        }
-    }
-
-    async fn to_data(&self) -> GuildConfigData {
-        GuildConfigData {
-            default_roles: self.default_roles.clone(),
-            info_channels: {
-                let mut result: HashMap<InfoChannelType, InfoChannelData> = HashMap::new();
-                for (k, v) in &self.info_channels {
-                    result.insert(*k, v.read().await.clone());
-                }
-                result
-            },
-            command_filters: {
-                let command_filters = self.cf_cache.read().await;
-                let mut result: HashMap<String, CommandFilter> = HashMap::new();
-                for (k, v) in &*command_filters {
-                    result.insert(k.clone(), v.read().await.clone());
-                }
-                result
-            }
-        }
+    /// Get command filter
+    pub async fn get_command_filter(&self, command_name: &str) -> Arc<RwLock<CommandFilter>> {
+        let cf_cache = self.cf_cache.read().await;
+        Arc::clone(cf_cache.get(command_name).unwrap())
     }
 }
 
