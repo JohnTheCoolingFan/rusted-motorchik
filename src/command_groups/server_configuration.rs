@@ -12,11 +12,7 @@ use crate::guild_config::{GuildConfigManager, CommandDisability, InfoChannelType
 #[example("rickroll")]
 async fn enable_command(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
-    let gc_manager = {
-        let data = ctx.data.read().await;
-        data.get::<GuildConfigManager>().unwrap().clone()
-    };
-    let guild_config_arc = gc_manager.get_guild_config(&guild).await?;
+    let guild_config_arc = GuildConfigManager::get_guild_config_from_ctx(ctx, &guild).await?;
     let mut guild_config = guild_config_arc.write().await;
     let command_name = args.quoted().trimmed().single::<String>()?;
     guild_config.edit_command_filter(&command_name, |e| {
@@ -33,11 +29,7 @@ async fn enable_command(ctx: &Context, msg: &Message, mut args: Args) -> Command
 #[example("rickroll")]
 async fn disable_command(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
-    let gc_manager = {
-        let data = ctx.data.read().await;
-        data.get::<GuildConfigManager>().unwrap().clone()
-    };
-    let guild_config_arc = gc_manager.get_guild_config(&guild).await?;
+    let guild_config_arc = GuildConfigManager::get_guild_config_from_ctx(ctx, &guild).await?;
     let mut guild_config = guild_config_arc.write().await;
     let command_name = args.quoted().trimmed().single::<String>()?;
     guild_config.edit_command_filter(&command_name, |e| {
@@ -58,11 +50,7 @@ async fn whitelist_command(ctx: &Context, msg: &Message, mut args: Args) -> Comm
     let channels: Vec<ChannelId> = args.iter::<ChannelId>().quoted().trimmed().collect::<Result<Vec<ChannelId>, ArgError<<ChannelId as FromStr>::Err>>>()?;
     let mentions = channels.iter().map(|c| c.mention().to_string()).collect::<Vec<String>>().join("\n");
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
-    let gc_manager = {
-        let data = ctx.data.read().await;
-        data.get::<GuildConfigManager>().unwrap().clone()
-    };
-    let guild_config_arc = gc_manager.get_guild_config(&guild).await?;
+    let guild_config_arc = GuildConfigManager::get_guild_config_from_ctx(ctx, &guild).await?;
     let mut guild_config = guild_config_arc.write().await;
     guild_config.edit_command_filter(&command_name, |e| {
         e.filter_type(CommandDisability::Whitelisted).channels(channels)
@@ -82,11 +70,7 @@ async fn blacklist_command(ctx: &Context, msg: &Message, mut args: Args) -> Comm
     let channels = args.iter().quoted().trimmed().collect::<Result<Vec<ChannelId>, ArgError<<ChannelId as FromStr>::Err>>>()?;
     let mentions = channels.iter().map(|c| c.mention().to_string()).collect::<Vec<String>>().join("\n");
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
-    let gc_manager = {
-        let data = ctx.data.read().await;
-        data.get::<GuildConfigManager>().unwrap().clone()
-    };
-    let guild_config_arc = gc_manager.get_guild_config(&guild).await?;
+    let guild_config_arc = GuildConfigManager::get_guild_config_from_ctx(ctx, &guild).await?;
     let mut guild_config = guild_config_arc.write().await;
     guild_config.edit_command_filter(&command_name, |e| {
         e.filter_type(CommandDisability::Blacklisted).channels(channels)
@@ -112,11 +96,7 @@ async fn enable_ic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
     args.trimmed().quoted();
     let ic_type = args.single::<InfoChannelType>()?;
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
-    let gc_manager = {
-        let data = ctx.data.read().await;
-        data.get::<GuildConfigManager>().unwrap().clone()
-    };
-    let guild_config_arc = gc_manager.get_guild_config(&guild).await?;
+    let guild_config_arc = GuildConfigManager::get_guild_config_from_ctx(ctx, &guild).await?;
     let mut guild_config = guild_config_arc.write().await;
     guild_config.edit(|e| {
         e.info_channel(ic_type, |i| {
@@ -136,11 +116,7 @@ async fn disable_ic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
     args.trimmed().quoted();
     let ic_type = args.single::<InfoChannelType>()?;
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
-    let gc_manager = {
-        let data = ctx.data.read().await;
-        data.get::<GuildConfigManager>().unwrap().clone()
-    };
-    let guild_config_arc = gc_manager.get_guild_config(&guild).await?;
+    let guild_config_arc = GuildConfigManager::get_guild_config_from_ctx(ctx, &guild).await?;
     let mut guild_config = guild_config_arc.write().await;
     guild_config.edit(|e| {
         e.info_channel(ic_type, |i| {
@@ -161,11 +137,7 @@ async fn set_ic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let ic_type = args.single::<InfoChannelType>()?;
     let channel = args.single::<ChannelId>()?;
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
-    let gc_manager = {
-        let data = ctx.data.read().await;
-        data.get::<GuildConfigManager>().unwrap().clone()
-    };
-    let guild_config_arc = gc_manager.get_guild_config(&guild).await?;
+    let guild_config_arc = GuildConfigManager::get_guild_config_from_ctx(ctx, &guild).await?;
     let mut guild_config = guild_config_arc.write().await;
     guild_config.edit(|e| {
         e.info_channel(ic_type, |i| {
@@ -194,11 +166,7 @@ async fn default_roles(ctx: &Context, msg: &Message, mut args: Args) -> CommandR
     let roles = args.iter().quoted().trimmed().collect::<Result<Vec<RoleId>, ArgError<<RoleId as FromStr>::Err>>>()?;
     let roles_cnt = roles.len();
     let guild = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
-    let gc_manager = {
-        let data = ctx.data.read().await;
-        data.get::<GuildConfigManager>().unwrap().clone()
-    };
-    let guild_config_arc = gc_manager.get_guild_config(&guild).await?;
+    let guild_config_arc = GuildConfigManager::get_guild_config_from_ctx(ctx, &guild).await?;
     let mut guild_config = guild_config_arc.write().await;
     guild_config.edit(|e| {
         e.default_roles(roles)

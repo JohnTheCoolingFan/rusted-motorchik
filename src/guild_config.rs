@@ -83,6 +83,11 @@ impl GuildConfigManager {
         let gc_cache = self.gc_cache.read().await;
         gc_cache.contains_key(&guild_id)
     }
+
+    pub async fn get_guild_config_from_ctx(ctx: &Context, guild: &Guild) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
+        let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
+        gc_manager.get_guild_config(guild).await
+    }
 }
 
 pub struct GuildConfig {
