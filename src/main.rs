@@ -182,23 +182,29 @@ impl EventHandler for Handler {
         let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
         let guild_cached = guild_id.to_guild_cached(&ctx).await.unwrap();
         if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
-            let queue = Arc::clone(ctx.data.read().await.get::<RoleQueue>().unwrap());
-            if !guild_config.read().await.default_roles().is_empty() {
-                if new_member.pending {
-                    let mut queue_write = queue.write().await;
-                    queue_write.push((guild_id, new_member.user.id))
-                } else if let Err(why) = new_member.add_roles(&ctx, guild_config.read().await.default_roles()).await {
-                    println!("Failed to give roles to member {} of guild {}: {}", new_member.user.id, guild_id, why);
+            // Give roles or put on queue
+            {
+                let queue = Arc::clone(ctx.data.read().await.get::<RoleQueue>().unwrap());
+                if !guild_config.read().await.default_roles().is_empty() {
+                    if new_member.pending {
+                        let mut queue_write = queue.write().await;
+                        queue_write.push((guild_id, new_member.user.id))
+                    } else if let Err(why) = new_member.add_roles(&ctx, guild_config.read().await.default_roles()).await {
+                        println!("Failed to give roles to member {} of guild {}: {}", new_member.user.id, guild_id, why);
+                    }
                 }
-            }
-            let welcome_ic_data_arc = guild_config.read().await.info_channels_data(InfoChannelType::Welcome);
-            let welcome_ic_data = welcome_ic_data_arc.read().await;
-            if welcome_ic_data.enabled {
-                let channel = welcome_ic_data.channel_id;
-                if let Err(why) = channel.say(&ctx, format!("Welcome, {}!", new_member.mention())).await {
-                    println!("Failed to greet member {} in guild {} due to a following error: {}", new_member, guild_id, why);
+            };
+            // Send a welcoming message
+            {
+                let welcome_ic_data_arc = guild_config.read().await.info_channels_data(InfoChannelType::Welcome);
+                let welcome_ic_data = welcome_ic_data_arc.read().await;
+                if welcome_ic_data.enabled {
+                    let channel = welcome_ic_data.channel_id;
+                    if let Err(why) = channel.say(&ctx, format!("Welcome, {}!", new_member.mention())).await {
+                        println!("Failed to greet member {} in guild {} due to a following error: {}", new_member, guild_id, why);
+                    }
                 }
-            }
+            };
         }
     }
 
