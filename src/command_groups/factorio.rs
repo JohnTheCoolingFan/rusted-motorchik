@@ -1,7 +1,9 @@
+use std::sync::Arc;
 use std::error::Error;
 use thiserror::Error;
 use serenity::prelude::*;
 use serenity::model::prelude::*;
+use serenity::utils::ArgumentConvert;
 use serenity::builder::{Timestamp, CreateEmbed};
 use serenity::framework::standard::macros::{command, group};
 use serenity::framework::standard::{CommandResult, Args, CommandError};
@@ -42,6 +44,15 @@ impl ModData {
     pub fn new(title: String, description: String, url: String, color: (u8, u8, u8), downloads_count: usize, author: String) -> Self {
         ModData{title, description, url, color, downloads_count, author,
             timestamp: None, thumbnail_url: None, game_version: None, download: None, latest_version: None}
+    }
+
+    pub fn result_to_embed<'a>(embed: &'a mut CreateEmbed, mod_data: Result<ModData, Box<dyn Error + Send + Sync>>, mod_name: &str) -> &'a mut CreateEmbed {
+        match mod_data {
+            Ok(data) => construct_mod_embed(embed, data),
+            Err(_) => embed.title("Mod not found")
+                .description(format!("Failed to find {}", mod_name))
+                .color(FAILED_EMBED_COLOR)
+        }
     }
 }
 
@@ -107,13 +118,20 @@ pub async fn scheduled_modlist(ctx: &Context, channel: ChannelId) -> std::result
 async fn process_mod(ctx: &Context, channel: ChannelId, mod_name: &str) -> std::result::Result<MessageId, CommandError> {
     let mod_data = get_mod_info(ctx, mod_name).await;
     Ok(channel.send_message(&ctx.http, |m| m.embed(|e| {
-        match mod_data {
-            Ok(data) => construct_mod_embed(e, data),
-            Err(_) => e.title("Mod not found")
-                .description(format!("Failed to find {}", mod_name))
-                .color(FAILED_EMBED_COLOR)
-        }
+        ModData::result_to_embed(e, mod_data, mod_name)
     })).await?.id)
+}
+
+pub async fn update_mod_list(ctx: &Context, channel: ChannelId, guild: GuildId, messages: Arc<Vec<(String, MessageId)>>) -> CommandResult {
+    for (mod_name, message_id) in &*messages {
+        let message_id = message_id.to_string();
+        let mut message = Message::convert(ctx, Some(guild), Some(channel), &message_id).await?;
+        let mod_data = get_mod_info(ctx, mod_name).await;
+        message.edit(&ctx.http, |ed| ed.embed(|e| {
+            ModData::result_to_embed(e, mod_data, mod_name)
+        })).await?;
+    }
+    Ok(())
 }
 
 fn construct_mod_embed(e: &mut CreateEmbed, data: ModData) -> &mut CreateEmbed {
