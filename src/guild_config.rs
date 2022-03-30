@@ -249,8 +249,9 @@ impl GuildConfig {
 
     /// Get command filter
     pub async fn get_command_filter(&self, command_name: &str) -> Arc<RwLock<CommandFilter>> {
-        let cf_cache = self.cf_cache.read().await;
-        Arc::clone(cf_cache.get(command_name).unwrap())
+        let mut cf_cache = self.cf_cache.write().await;
+        let cf_entry = cf_cache.entry(command_name.into());
+        Arc::clone(cf_entry.or_insert_with(|| Arc::new(RwLock::new(CommandFilter::default()))))
     }
 }
 
