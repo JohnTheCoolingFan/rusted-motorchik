@@ -201,7 +201,7 @@ impl GuildConfig {
                 if let Some(channel) = ic_edit.channel {
                     ic_data.channel_id = channel
                 }
-                // Using Vec::clear() would be more efficient, but thatt requires RwLock, which
+                // Using Vec::clear() would be more efficient, but that requires RwLock, which
                 // will require redoing code that uses mod_list_messages
                 if ic_type == InfoChannelType::ModList {
                     self.mod_list_messages = Arc::new(Vec::new());
