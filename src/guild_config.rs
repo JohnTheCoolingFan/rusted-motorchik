@@ -190,13 +190,16 @@ impl GuildConfig {
             if let Some(def_roles) = edit_guild_config.default_roles {
                 self.default_roles = def_roles;
             }
-            for ic_edit in edit_guild_config.info_channels {
-                let mut ic_data = self.info_channels.get(&ic_edit.0).unwrap().write().await;
-                if let Some(state) = ic_edit.1.state {
+            for (ic_type, ic_edit) in edit_guild_config.info_channels {
+                let mut ic_data = self.info_channels.get(&ic_type).unwrap().write().await;
+                if let Some(state) = ic_edit.state {
                     ic_data.enabled = state
                 }
-                if let Some(channel) = ic_edit.1.channel {
+                if let Some(channel) = ic_edit.channel {
                     ic_data.channel_id = channel
+                }
+                if ic_type == InfoChannelType::ModList {
+                    self.mod_list_messages = Arc::new(Vec::new());
                 }
             }
             self.write().await
