@@ -21,7 +21,7 @@ use serenity::http::Http;
 use guild_config::{GuildConfigManager, InfoChannelType};
 
 const ROLE_QUEUE_INTERVAL: Duration = Duration::from_secs(30); // 30 seconds
-const MOD_LIST_UPDATE_INTERVAL: Duration = Duration::from_secs(60 * 60); // 1 hour
+const MOD_LIST_UPDATE_INTERVAL: Duration = Duration::from_secs(10); // 1 hour
 const ERROR_EMBED_COLOR: (u8, u8, u8) = (255, 15, 15);
 
 pub struct RoleQueue;
@@ -168,9 +168,14 @@ impl EventHandler for Handler {
                                         match scheduled_modlist(ctx2.as_ref(), channel).await {
                                             Err(why) => println!("Failed to update mod list (send messages step) in guild {}, channel {} due to a following error: {}", guild, channel, why),
                                             Ok(message_ids) => {
-                                                let mut mod_list_messages = mod_list_messages_arc.write().await;
-                                                mod_list_messages.clear();
-                                                mod_list_messages.extend(message_ids);
+                                                {
+                                                    let mut mod_list_messages = mod_list_messages_arc.write().await;
+                                                    mod_list_messages.clear();
+                                                    mod_list_messages.extend(message_ids);
+                                                };
+                                                if let Err(why) = guild_config.read().await.write().await {
+                                                    println!("Failed to write guild config for guild {}: {}", guild, why);
+                                                }
                                             }
                                         }
                                     } else if let Err(why) = update_mod_list(&ctx2, channel, guild, mod_list_messages_arc).await {
