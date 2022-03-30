@@ -21,7 +21,7 @@ use serenity::http::Http;
 use guild_config::{GuildConfigManager, InfoChannelType};
 
 const ROLE_QUEUE_INTERVAL: Duration = Duration::from_secs(30); // 30 seconds
-const MOD_LIST_UPDATE_INTERVAL: Duration = Duration::from_secs(10); // 1 hour
+const MOD_LIST_UPDATE_INTERVAL: Duration = Duration::from_secs(60 * 60); // 1 hour
 const ERROR_EMBED_COLOR: (u8, u8, u8) = (255, 15, 15);
 
 pub struct RoleQueue;
