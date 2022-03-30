@@ -183,7 +183,10 @@ impl GuildConfig {
     /// Edit this GuildConfig
     /// If multiple edits are being made, it's better to collect collect them and apply all at once
     /// instead of editing small details sequentially
-    pub async fn edit<F: FnOnce(&mut EditGuildConfig) -> &mut EditGuildConfig>(&mut self, f: F) -> Result<(), Box<dyn Error + Send + Sync>> {
+    pub async fn edit<F>(&mut self, f: F) -> Result<(), Box<dyn Error + Send + Sync>>
+    where
+        F: FnOnce(&mut EditGuildConfig) -> &mut EditGuildConfig
+    {
         let mut edit_guild_config = EditGuildConfig::default();
         f(&mut edit_guild_config);
         if !(edit_guild_config.default_roles.is_none() && edit_guild_config.info_channels.is_empty()) {
@@ -209,7 +212,10 @@ impl GuildConfig {
     }
 
     /// Edit command filter for this guild and this name
-    pub async fn edit_command_filter<F: FnOnce(&mut EditCommandFilter) -> &mut EditCommandFilter>(&mut self, command_name: &str, f: F) -> Result<(), Box<dyn Error + Send + Sync>> {
+    pub async fn edit_command_filter<F>(&mut self, command_name: &str, f: F) -> Result<(), Box<dyn Error + Send + Sync>>
+    where
+        F: FnOnce(&mut EditCommandFilter) -> &mut EditCommandFilter
+    {
         let mut cf_edit = EditCommandFilter::default();
         f(&mut cf_edit);
         if cf_edit.filter_type.is_some() || cf_edit.channels.is_some() {
@@ -285,7 +291,10 @@ impl EditGuildConfig {
     }
 
     /// Set changes for InfoChannels
-    pub fn info_channel<F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel>(&mut self, ic_type: InfoChannelType, f: F) -> &mut Self {
+    pub fn info_channel<F>(&mut self, ic_type: InfoChannelType, f: F) -> &mut Self
+    where
+        F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel
+    {
         let mut edit_ic = EditInfoChannel::default();
         f(&mut edit_ic);
         self.info_channels.insert(ic_type, edit_ic);
@@ -293,17 +302,26 @@ impl EditGuildConfig {
     }
 
     /// Alias for [Self::info_channel] with welcome channel dialed in
-    pub fn welcome_info_channel<F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel>(&mut self, f: F) -> &mut Self {
+    pub fn welcome_info_channel<F>(&mut self, f: F) -> &mut Self
+    where
+        F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel
+    {
         self.info_channel(InfoChannelType::Welcome, f)
     }
 
     /// Alias for [Self::info_channel] with log channel dialed in
-    pub fn log_info_channel<F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel>(&mut self, f: F) -> &mut Self {
+    pub fn log_info_channel<F>(&mut self, f: F) -> &mut Self
+    where
+        F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel
+    {
         self.info_channel(InfoChannelType::Log, f)
     }
 
     /// Alias for [Self::info_channel] with modlist channel dialed in
-    pub fn modlist_info_channel<F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel>(&mut self, f: F) -> &mut Self {
+    pub fn modlist_info_channel<F>(&mut self, f: F) -> &mut Self
+    where
+        F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel
+    {
         self.info_channel(InfoChannelType::ModList, f)
     }
 }
