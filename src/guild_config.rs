@@ -111,7 +111,7 @@ impl GuildConfig {
     async fn new(guild: &Guild, config_path: &Path) -> Result<Self, Box<dyn Error + Send + Sync>> {
         let guild_config_data = GuildConfigData::new(guild.system_channel_id.unwrap_or(ChannelId(0)));
         let path = config_path.join(format!("guild_{}.json", guild.id));
-        let mut result = Self::from_data(guild_config_data, guild.id, path);
+        let result = Self::from_data(guild_config_data, guild.id, path);
         result.write().await?;
         Ok(result)
     }
@@ -125,7 +125,7 @@ impl GuildConfig {
     }
 
     /// Write GuildConfig to disk
-    async fn write(&mut self) -> Result<(), Box<dyn Error + Send + Sync>> {
+    pub async fn write(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
         let file = File::create(&self.config_path)?;
         serde_json::to_writer(file, &self.to_data().await)?;
         Ok(())
@@ -157,9 +157,7 @@ impl GuildConfig {
         GuildConfigData {
             mod_list_messages: Vec::clone(&*self.mod_list_messages.read().await),
             default_roles: self.default_roles.clone(),
-            info_channels: {
-                Self::unwrap_hashmap_arcrwlock(&self.info_channels).await
-            },
+            info_channels: Self::unwrap_hashmap_arcrwlock(&self.info_channels).await,
             command_filters: {
                 let command_filters = self.cf_cache.read().await;
                 Self::unwrap_hashmap_arcrwlock(&*command_filters).await
