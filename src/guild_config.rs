@@ -101,7 +101,7 @@ pub struct GuildConfig {
     pub guild_id: GuildId,
     cf_cache: RwLock<HashMap<String, Arc<RwLock<CommandFilter>>>>,
     config_path: PathBuf,
-    pub mod_list_messages: Arc<Vec<(String, MessageId)>>,
+    pub mod_list_messages: Arc<RwLock<Vec<(String, MessageId)>>>,
     default_roles: Vec<RoleId>,
     info_channels: HashMap<InfoChannelType, Arc<RwLock<InfoChannelData>>>,
 }
@@ -137,7 +137,7 @@ impl GuildConfig {
             guild_id,
             config_path: path,
             cf_cache: RwLock::new(Self::hashmap_wrap_arcrwlock(data.command_filters)),
-            mod_list_messages: Arc::new(data.mod_list_messages),
+            mod_list_messages: Arc::new(RwLock::new(data.mod_list_messages)),
             default_roles: data.default_roles,
             info_channels: Self::hashmap_wrap_arcrwlock(data.info_channels)
         }
@@ -155,7 +155,7 @@ impl GuildConfig {
     /// Create data object that can be easily serialized
     async fn to_data(&self) -> GuildConfigData {
         GuildConfigData {
-            mod_list_messages: Vec::clone(&self.mod_list_messages),
+            mod_list_messages: Vec::clone(&*self.mod_list_messages.read().await),
             default_roles: self.default_roles.clone(),
             info_channels: {
                 Self::unwrap_hashmap_arcrwlock(&self.info_channels).await
@@ -201,10 +201,8 @@ impl GuildConfig {
                 if let Some(channel) = ic_edit.channel {
                     ic_data.channel_id = channel
                 }
-                // Using Vec::clear() would be more efficient, but that requires RwLock, which
-                // will require redoing code that uses mod_list_messages
                 if ic_type == InfoChannelType::ModList {
-                    self.mod_list_messages = Arc::new(Vec::new());
+                    self.mod_list_messages.write().await.clear();
                 }
             }
             self.write().await

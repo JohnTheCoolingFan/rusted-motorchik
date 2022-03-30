@@ -158,7 +158,8 @@ impl EventHandler for Handler {
                                 let mod_list_ic_data = mod_list_ic_data_arc.read().await;
                                 if mod_list_ic_data.enabled {
                                     let channel = mod_list_ic_data.channel_id;
-                                    if guild_config.read().await.mod_list_messages.is_empty() {
+                                    let mod_list_messages_arc = Arc::clone(&guild_config.read().await.mod_list_messages);
+                                    if mod_list_messages_arc.read().await.is_empty() {
                                         if let Ok(messages) = channel.messages(&ctx2, |gm| gm.limit(MOD_LIST.len() as u64)).await {
                                             if let Err(why) = channel.delete_messages(&ctx2, messages).await {
                                                 println!("Failed to update mod list (delete old messages step) at guild {} in channel {} due to a following error: {}", guild, channel, why);
@@ -166,9 +167,13 @@ impl EventHandler for Handler {
                                         };
                                         match scheduled_modlist(ctx2.as_ref(), channel).await {
                                             Err(why) => println!("Failed to update mod list (send messages step) in guild {}, channel {} due to a following error: {}", guild, channel, why),
-                                            Ok(message_ids) => guild_config.write().await.mod_list_messages = Arc::new(message_ids)
+                                            Ok(message_ids) => {
+                                                let mut mod_list_messages = mod_list_messages_arc.write().await;
+                                                mod_list_messages.clear();
+                                                mod_list_messages.extend(message_ids);
+                                            }
                                         }
-                                    } else if let Err(why) = update_mod_list(&ctx2, channel, guild, Arc::clone(&guild_config.read().await.mod_list_messages)).await {
+                                    } else if let Err(why) = update_mod_list(&ctx2, channel, guild, mod_list_messages_arc).await {
                                         println!("Failed to updte mod list (updating messages) in guild {}, channel {} due to a following error: {}", guild, channel, why);
                                     }
                                 }
