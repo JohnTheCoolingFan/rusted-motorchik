@@ -4,6 +4,7 @@ use serenity::model::channel::Message;
 use serenity::framework::standard::macros::{command, group};
 use serenity::framework::standard::CommandResult;
 use chrono::offset::Utc;
+use sysinfo::SystemExt;
 
 const GITHUB_URL: &str = "https://github.com/JohnTheCoolingFan/rusted-motorchik";
 const GITLAB_URL: &str = "Sorry, not available yet";
@@ -33,17 +34,18 @@ async fn source(ctx: &Context, msg: &Message) -> CommandResult {
 /// Info about host on which this bot is currently running
 #[command]
 async fn hostinfo(ctx: &Context, msg: &Message) -> CommandResult {
+    let system_info = sysinfo::System::default();
     msg.channel_id.send_message(&ctx.http, |m| {
         m.embed(|e| {
             e.title("Host info")
                 .timestamp(&Utc::now())
                 .color((47, 137, 197))
-                .field("Hostname", match sys_info::hostname() {
-                    Ok(host) => host,
+                .field("Hostname", match system_info.host_name() {
+                    Some(host) => host,
                     _ => "Unknown".into()
                 }, true)
-                .field("Platform", match sys_info::os_release() {
-                    Ok(platform) => platform,
+                .field("Platform", match system_info.long_os_version() {
+                    Some(platform) => platform,
                     _ => "unknwon".into()
                 }, true)
                 .field("Architecture", env::consts::ARCH, true)
