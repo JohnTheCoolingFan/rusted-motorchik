@@ -102,6 +102,7 @@ impl EventHandler for Handler {
     // Redirect DMs to author
     async fn message(&self, ctx: Context, msg: Message) {
         if !msg.is_own(&ctx).await {
+            // DM/PM redirect
             if msg.is_private() {
                 if let Ok(appinfo) = ctx.http.get_current_application_info().await {
                     let owner = appinfo.owner;
@@ -110,21 +111,37 @@ impl EventHandler for Handler {
                     }
                 }
             } else {
-                static DISCORD_MESSAGE_LINK_REGEX: OnceCell<Regex> = OnceCell::new();
-                let links = DISCORD_MESSAGE_LINK_REGEX
-                    .get_or_init(|| Regex::new(r"https://discord.com/channels/[0-9]*/[0-9]*/[0-9]*").unwrap())
-                    .find_iter(&msg.content);
-                for link in links.map(|l| l.as_str()) {
-                    if let Ok(message) = Message::convert(&ctx, None, None, link).await {
-                        if let Err(why) = msg.channel_id
-                            .send_message(&ctx, |cm| cm.reference_message(&msg)
-                                .embed(|e| e.author(|cea| cea
-                                        .icon_url(message.author.avatar_url().unwrap_or_default())
-                                        .name(message.author.name)
-                                        .url(link))
-                                .description(message.content))
-                                .allowed_mentions(|cam| cam.empty_users().empty_roles().empty_parse())).await {
-                            println!("Failed to reply: {}", why);
+                // Send message preview in reply to a message with a link to a message
+                {
+                    static DISCORD_MESSAGE_LINK_REGEX: OnceCell<Regex> = OnceCell::new();
+                    let links = DISCORD_MESSAGE_LINK_REGEX
+                        .get_or_init(|| Regex::new(r"https://discord.com/channels/[0-9]*/[0-9]*/[0-9]*").unwrap())
+                        .find_iter(&msg.content);
+                    for link in links.map(|l| l.as_str()) {
+                        if let Ok(message) = Message::convert(&ctx, None, None, link).await {
+                            if let Err(why) = msg.channel_id
+                                .send_message(&ctx, |cm| cm.reference_message(&msg)
+                                    .embed(|e| e.author(|cea| cea
+                                            .icon_url(message.author.avatar_url().unwrap_or_default())
+                                            .name(message.author.name)
+                                            .url(link))
+                                    .description(message.content))
+                                    .allowed_mentions(|cam| cam.empty_users().empty_roles().empty_parse())).await {
+                                println!("Failed to reply: {}", why);
+                            }
+                        }
+                    }
+                }
+
+                // Send mod info in response to a message with >>mod name<< pattern
+                {
+                    static MOD_NAME_REGEX: OnceCell<Regex> = OnceCell::new();
+                    let mod_names = MOD_NAME_REGEX
+                        .get_or_init(|| Regex::new(r">>[A-Za-z0-9 ]*<<").unwrap())
+                        .find_iter(&msg.content);
+                    for mod_name in mod_names.map(|mn| mn.as_str()) {
+                        if let Err(why) = reply_process_mod(&ctx, &msg, &mod_name[2..(mod_name.len()-2)]).await {
+                            println!("Failed to reply with mod data: {}", why);
                         }
                     }
                 }

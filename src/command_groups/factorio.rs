@@ -122,6 +122,13 @@ async fn process_mod(ctx: &Context, channel: ChannelId, mod_name: &str) -> std::
     })).await?.id)
 }
 
+pub async fn reply_process_mod(ctx: &Context, msg: &Message, mod_name: &str) -> CommandResult {
+    let mod_data = get_mod_info(ctx, mod_name).await;
+    msg.channel_id.send_message(ctx, |cm| cm.reference_message(msg)
+        .embed(|ce| ModData::result_to_embed(ce, mod_data, mod_name))).await?;
+    Ok(())
+}
+
 pub async fn update_mod_list(ctx: &Context, channel: ChannelId, guild: GuildId, messages: Arc<RwLock<Vec<(String, MessageId)>>>) -> CommandResult {
     for (mod_name, message_id) in &*messages.read().await {
         let message_id = message_id.to_string();
