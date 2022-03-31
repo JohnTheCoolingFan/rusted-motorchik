@@ -2,6 +2,8 @@ mod command_groups;
 mod guild_config;
 
 use command_groups::*;
+use once_cell::sync::OnceCell;
+use regex::Regex;
 
 use std::env;
 use std::collections::HashSet;
@@ -16,7 +18,7 @@ use serenity::client::{Client, Context, EventHandler};
 use serenity::model::{channel::Message, gateway::Ready};
 use serenity::framework::standard::{StandardFramework, CommandResult, Args, CommandGroup, HelpOptions};
 use serenity::framework::standard::{macros::{help, hook}, help_commands};
-use serenity::utils::ContentSafeOptions;
+use serenity::utils::{ContentSafeOptions, ArgumentConvert};
 use serenity::http::Http;
 use guild_config::{GuildConfigManager, InfoChannelType};
 
@@ -99,11 +101,32 @@ impl EventHandler for Handler {
 
     // Redirect DMs to author
     async fn message(&self, ctx: Context, msg: Message) {
-        if msg.is_private() && !msg.is_own(&ctx.cache).await {
-            if let Ok(appinfo) = ctx.http.get_current_application_info().await {
-                let owner = appinfo.owner;
-                if let Err(why) = owner.dm(&ctx.http, |m| m.content(format!("I have received a message from {}:\n{}", msg.author.tag(), msg.content))).await {
-                    println!("Failed to redirect message: {}", why)
+        if !msg.is_own(&ctx).await {
+            if msg.is_private() {
+                if let Ok(appinfo) = ctx.http.get_current_application_info().await {
+                    let owner = appinfo.owner;
+                    if let Err(why) = owner.dm(&ctx.http, |m| m.content(format!("I have received a message from {}:\n{}", msg.author.tag(), msg.content))).await {
+                        println!("Failed to redirect message: {}", why)
+                    }
+                }
+            } else {
+                static DISCORD_MESSAGE_LINK_REGEX: OnceCell<Regex> = OnceCell::new();
+                let links = DISCORD_MESSAGE_LINK_REGEX
+                    .get_or_init(|| Regex::new(r"https://discord.com/channels/[0-9]*/[0-9]*/[0-9]*").unwrap())
+                    .find_iter(&msg.content);
+                for link in links.map(|l| l.as_str()) {
+                    if let Ok(message) = Message::convert(&ctx, None, None, link).await {
+                        if let Err(why) = msg.channel_id
+                            .send_message(&ctx, |cm| cm.reference_message(&msg)
+                                .embed(|e| e.author(|cea| cea
+                                        .icon_url(message.author.avatar_url().unwrap_or_default())
+                                        .name(message.author.name)
+                                        .url(link))
+                                .description(message.content))
+                                .allowed_mentions(|cam| cam.empty_users().empty_roles().empty_parse())).await {
+                            println!("Failed to reply: {}", why);
+                        }
+                    }
                 }
             }
         }
