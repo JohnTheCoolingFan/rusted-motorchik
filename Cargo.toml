@@ -12,7 +12,7 @@ chrono = "0.4"
 sys-info = "0.9"
 #psutil = "3.2.1"
 scraper = "0"
-reqwest = { version = "0", features = [ "json" ] }
+reqwest = { version = "0", features = [ "json", "native-tls-vendored" ] }
 thiserror = "1"
 serde = { version = "1", features = [ "derive" ] }
 serde_repr = "0.1"
