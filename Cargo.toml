@@ -9,11 +9,9 @@ edition = "2021"
 serenity = "0.10"
 tokio = { version = "1", features = [ "full" ] }
 chrono = "0.4"
-#sys-info = "0.9"
 sysinfo = "0.23"
-#psutil = "3.2.1"
 scraper = "0"
-reqwest = { version = "0", features = [ "json", "native-tls-vendored" ] }
+reqwest = { version = "0", default_features = false, features = [ "json", "rustls-tls" ] }
 thiserror = "1"
 serde = { version = "1", features = [ "derive" ] }
 serde_repr = "0.1"
