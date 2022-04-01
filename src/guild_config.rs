@@ -126,8 +126,9 @@ impl GuildConfig {
 
     /// Write GuildConfig to disk
     pub async fn write(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
+        let data = self.to_data().await;
         let file = File::create(&self.config_path)?;
-        serde_json::to_writer(file, &self.to_data().await)?;
+        serde_json::to_writer(file, &data)?;
         Ok(())
     }
 
