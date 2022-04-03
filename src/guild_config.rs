@@ -70,13 +70,36 @@ impl GuildConfigManager {
 
     /// Get guild config from manager
     pub async fn get_guild_config(&self, guild_id: GuildId, ctx: &Context) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
+        let guild_arg = GuildConfigGetArgs::IdAndContext(guild_id, ctx);
+        self._get_guild_config(guild_arg).await
+    }
+
+    /// Get guild config from manager using a cached guild
+    pub async fn get_cached_guild_config(&self, guild: &Guild) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
+        let guild_arg = GuildConfigGetArgs::CachedGuild(guild);
+        self._get_guild_config(guild_arg).await
+    }
+
+    /// Accepts either a combination of GuildId and &Context or &Guild
+    async fn _get_guild_config(&self, guild: GuildConfigGetArgs<'_>) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
+        let guild_id = match guild {
+            GuildConfigGetArgs::IdAndContext(id, _) => id,
+            GuildConfigGetArgs::CachedGuild(g) => g.id
+        };
         if !self.is_cached(guild_id).await {
             let mut gc_cache = self.gc_cache.write().await;
             if let Ok(gc) = GuildConfig::read(guild_id, &self.config_path) {
                 gc_cache.insert(guild_id, Arc::new(RwLock::new(gc)));
-            } else  {
-                let guild = guild_id.to_guild_cached(ctx).await.ok_or(GuildConfigError::GuildCacheFailed(guild_id))?;
-                gc_cache.insert(guild_id, Arc::new(RwLock::new(GuildConfig::new(&guild, &self.config_path).await?)));
+            } else {
+                match guild {
+                    GuildConfigGetArgs::IdAndContext(id, ctx) => {
+                        let guild_cached = id.to_guild_cached(ctx).await.ok_or(GuildConfigError::GuildCacheFailed(id))?;
+                        gc_cache.insert(guild_id, Arc::new(RwLock::new(GuildConfig::new(&guild_cached, &self.config_path).await?)));
+                    },
+                    GuildConfigGetArgs::CachedGuild(guild_cached) => {
+                        gc_cache.insert(guild_id, Arc::new(RwLock::new(GuildConfig::new(guild_cached, &self.config_path).await?)));
+                    }
+                };
             }
         }
         let gc_cache = self.gc_cache.read().await;
@@ -96,6 +119,11 @@ impl GuildConfigManager {
         let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
         gc_manager.get_guild_config(guild, ctx).await
     }
+}
+
+enum GuildConfigGetArgs<'a> {
+    IdAndContext(GuildId, &'a Context),
+    CachedGuild(&'a Guild)
 }
 
 pub struct GuildConfig {
