@@ -70,18 +70,17 @@ impl GuildConfigManager {
 
     /// Get guild config from manager
     pub async fn get_guild_config(&self, guild_id: GuildId, ctx: &Context) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
-        let guild_arg = GuildConfigGetArgs::IdAndContext(guild_id, ctx);
-        self._get_guild_config(guild_arg).await
+        self._get_guild_config((guild_id, ctx)).await
     }
 
     /// Get guild config from manager using a cached guild
     pub async fn get_cached_guild_config(&self, guild: &Guild) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
-        let guild_arg = GuildConfigGetArgs::CachedGuild(guild);
-        self._get_guild_config(guild_arg).await
+        self._get_guild_config(guild).await
     }
 
     /// Accepts either a combination of GuildId and &Context or &Guild
-    async fn _get_guild_config(&self, guild: GuildConfigGetArgs<'_>) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
+    async fn _get_guild_config(&self, guild: impl Into<GuildConfigGetArgs<'_>>) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
+        let guild = guild.into();
         let guild_id = match guild {
             GuildConfigGetArgs::IdAndContext(id, _) => id,
             GuildConfigGetArgs::CachedGuild(g) => g.id
@@ -124,6 +123,18 @@ impl GuildConfigManager {
 enum GuildConfigGetArgs<'a> {
     IdAndContext(GuildId, &'a Context),
     CachedGuild(&'a Guild)
+}
+
+impl<'a> From<(GuildId, &'a Context)> for GuildConfigGetArgs<'a> {
+    fn from(args: (GuildId, &'a Context)) -> Self {
+        Self::IdAndContext(args.0, args.1)
+    }
+}
+
+impl<'a> From<&'a Guild> for GuildConfigGetArgs<'a> {
+    fn from(guild: &'a Guild) -> Self {
+        Self::CachedGuild(guild)
+    }
 }
 
 pub struct GuildConfig {
