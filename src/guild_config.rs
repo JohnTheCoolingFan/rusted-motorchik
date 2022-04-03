@@ -5,6 +5,7 @@ use std::iter;
 use std::path::{PathBuf, Path};
 use std::collections::HashMap;
 use std::sync::Arc;
+use thiserror::Error;
 use serenity::prelude::*;
 use serenity::model::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -74,7 +75,7 @@ impl GuildConfigManager {
             if let Ok(gc) = GuildConfig::read(guild_id, &self.config_path) {
                 gc_cache.insert(guild_id, Arc::new(RwLock::new(gc)));
             } else  {
-                let guild = guild_id.to_guild_cached(ctx).await.unwrap();
+                let guild = guild_id.to_guild_cached(ctx).await.ok_or(GuildConfigError::GuildCacheFailed(guild_id))?;
                 gc_cache.insert(guild_id, Arc::new(RwLock::new(GuildConfig::new(&guild, &self.config_path).await?)));
             }
         }
@@ -415,4 +416,10 @@ impl EditCommandFilter {
     pub fn disable(&mut self) -> &mut Self {
         self.filter_type(CommandDisability::Global)
     }
+}
+
+#[derive(Debug, Error)]
+pub enum GuildConfigError {
+    #[error("Failed to fetch guild {0} from cache")]
+    GuildCacheFailed(GuildId)
 }
