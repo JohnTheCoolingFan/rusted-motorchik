@@ -68,17 +68,18 @@ impl GuildConfigManager {
     }
 
     /// Get guild config from manager
-    pub async fn get_guild_config(&self, guild: &Guild) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
-        if !self.is_cached(guild.id).await {
+    pub async fn get_guild_config(&self, guild_id: GuildId, ctx: &Context) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
+        if !self.is_cached(guild_id).await {
             let mut gc_cache = self.gc_cache.write().await;
-            if let Ok(gc) = GuildConfig::read(guild.id, &self.config_path) {
-                gc_cache.insert(guild.id, Arc::new(RwLock::new(gc)));
+            if let Ok(gc) = GuildConfig::read(guild_id, &self.config_path) {
+                gc_cache.insert(guild_id, Arc::new(RwLock::new(gc)));
             } else  {
-                gc_cache.insert(guild.id, Arc::new(RwLock::new(GuildConfig::new(guild, &self.config_path).await?)));
+                let guild = guild_id.to_guild_cached(ctx).await.unwrap();
+                gc_cache.insert(guild_id, Arc::new(RwLock::new(GuildConfig::new(&guild, &self.config_path).await?)));
             }
         }
         let gc_cache = self.gc_cache.read().await;
-        Ok(Arc::clone(gc_cache.get(&guild.id).unwrap()))
+        Ok(Arc::clone(gc_cache.get(&guild_id).unwrap()))
     }
 
     /// Check if GuildCofnig is loaded into cache
@@ -91,9 +92,8 @@ impl GuildConfigManager {
     /// Re-retrieves guild config manager for each call, if multiple guill configs are needed,
     /// better to use get_guild_config instead
     pub async fn get_guild_config_from_ctx(ctx: &Context, guild: GuildId) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
-        let guild_cached = guild.to_guild_cached(ctx).await.unwrap();
         let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
-        gc_manager.get_guild_config(&guild_cached).await
+        gc_manager.get_guild_config(guild, ctx).await
     }
 }
 
