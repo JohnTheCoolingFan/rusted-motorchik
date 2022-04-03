@@ -52,8 +52,7 @@ struct Handler {
 
 impl Handler {
     async fn log_channel_kick_message(ctx: &Context, guild_id: GuildId, user: &UserId, kicked_by: &User, kick_reason: Option<String>) {
-        let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
-        if let Ok(guild_config) = gc_manager.get_guild_config(guild_id, ctx).await {
+        if let Ok(guild_config) = GuildConfigManager::get_guild_config_from_ctx(ctx, guild_id).await {
             let log_ic_data_arc = guild_config.read().await.info_channels_data(InfoChannelType::Log);
             let log_ic_data = log_ic_data_arc.read().await;
             if log_ic_data.enabled {
@@ -228,8 +227,7 @@ impl EventHandler for Handler {
 
     // Member joined a guild
     async fn guild_member_addition(&self, ctx: Context, guild_id: GuildId, mut new_member: Member) {
-        let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
-        if let Ok(guild_config) = gc_manager.get_guild_config(guild_id, &ctx).await {
+        if let Ok(guild_config) = GuildConfigManager::get_guild_config_from_ctx(&ctx, guild_id).await {
             // Give roles or put on queue
             {
                 let queue = Arc::clone(ctx.data.read().await.get::<RoleQueue>().unwrap());
@@ -258,8 +256,7 @@ impl EventHandler for Handler {
 
     // Member left a guild, or was banned/kicked
     async fn guild_member_removal(&self, ctx: Context, guild_id: GuildId, user: User, _member_data_if_available: Option<Member>) {
-        let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
-        if let Ok(guild_config) = gc_manager.get_guild_config(guild_id, &ctx).await {
+        if let Ok(guild_config) = GuildConfigManager::get_guild_config_from_ctx(&ctx, guild_id).await {
             let welcome_ic_data_arc = guild_config.read().await.info_channels_data(InfoChannelType::Welcome);
             let welcome_ic_data = welcome_ic_data_arc.read().await;
             if welcome_ic_data.enabled {
@@ -296,8 +293,7 @@ async fn my_help(ctx: &Context, msg: &Message, args: Args, hopt: &'static HelpOp
 
 #[hook]
 async fn before(ctx: &Context, msg: &Message, cmd_name: &str) -> bool {
-    let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
-    if let Ok(guild_config) = gc_manager.get_guild_config(msg.guild_id.unwrap(), ctx).await {
+    if let Ok(guild_config) = GuildConfigManager::get_guild_config_from_ctx(ctx, msg.guild_id.unwrap()).await {
         let guild_config_read = guild_config.read().await;
         let command_filter = guild_config_read.get_command_filter(cmd_name).await;
         return command_filter.read().await.can_run(msg.channel_id).is_ok();
