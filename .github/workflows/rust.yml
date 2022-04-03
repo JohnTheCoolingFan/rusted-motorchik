@@ -20,5 +20,8 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
-    - uses: actions/upload-artifact@3.0.0
     - name: Upload a Build Artifact
+      uses: actions/upload-artifact@3.0.0
+      with:
+        name: rusted-motorchik
+        path: target/debug/build/rusted-motorchik
