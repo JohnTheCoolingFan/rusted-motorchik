@@ -53,8 +53,7 @@ struct Handler {
 impl Handler {
     async fn log_channel_kick_message(ctx: &Context, guild_id: GuildId, user: &UserId, kicked_by: &User, kick_reason: Option<String>) {
         let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
-        let guild_cached = guild_id.to_guild_cached(&ctx).await.unwrap();
-        if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
+        if let Ok(guild_config) = gc_manager.get_guild_config(guild_id, ctx).await {
             let log_ic_data_arc = guild_config.read().await.info_channels_data(InfoChannelType::Log);
             let log_ic_data = log_ic_data_arc.read().await;
             if log_ic_data.enabled {
@@ -70,7 +69,7 @@ impl Handler {
     async fn log_channel_ban_message(ctx: &Context, guild_id: GuildId, user: &User, banned_by: Option<&User>, ban_reason: Option<String>) {
         let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
         let guild_cached = guild_id.to_guild_cached(&ctx).await.unwrap();
-        if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
+        if let Ok(guild_config) = gc_manager.get_guild_config(guild_id, ctx).await {
             let log_ic_data_arc = guild_config.read().await.info_channels_data(InfoChannelType::Log);
             let log_ic_data = log_ic_data_arc.read().await;
             if log_ic_data.enabled {
@@ -167,12 +166,9 @@ impl EventHandler for Handler {
                         if let Ok(mut member) = item.0.member(Arc::clone(&ctx1.http), item.1).await {
                             if member.pending {
                                 new_queue.push(*item)
-                            } else {
-                                let guild_cached = member.guild_id.to_guild_cached(&ctx1).await.unwrap();
-                                if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
-                                    if let Err(why) = member.add_roles(&ctx1, guild_config.read().await.default_roles()).await {
-                                        println!("Failed to give roles to member {} of guild {}: {}", member.user.id, member.guild_id, why);
-                                    }
+                            } else if let Ok(guild_config) = gc_manager.get_guild_config(member.guild_id, &ctx1).await {
+                                if let Err(why) = member.add_roles(&ctx1, guild_config.read().await.default_roles()).await {
+                                    println!("Failed to give roles to member {} of guild {}: {}", member.user.id, member.guild_id, why);
                                 }
                             }
                         }
@@ -192,35 +188,33 @@ impl EventHandler for Handler {
                     let gc_manager = Arc::clone(ctx2.data.read().await.get::<GuildConfigManager>().unwrap());
                     let guilds = ctx2.cache.guilds().await;
                     for guild in guilds {
-                        if let Some(guild_cached) = guild.to_guild_cached(&ctx2).await {
-                            if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
-                                let mod_list_ic_data_arc = guild_config.read().await.info_channels_data(InfoChannelType::ModList);
-                                let mod_list_ic_data = mod_list_ic_data_arc.read().await;
-                                if mod_list_ic_data.enabled {
-                                    let channel = mod_list_ic_data.channel_id;
-                                    let mod_list_messages_arc = Arc::clone(&guild_config.read().await.mod_list_messages);
-                                    if mod_list_messages_arc.read().await.is_empty() {
-                                        if let Ok(messages) = channel.messages(&ctx2, |gm| gm.limit(MOD_LIST.len() as u64)).await {
-                                            if let Err(why) = channel.delete_messages(&ctx2, messages).await {
-                                                println!("Failed to update mod list (delete old messages step) at guild {} in channel {} due to a following error: {}", guild, channel, why);
-                                            }
-                                        };
-                                        match scheduled_modlist(ctx2.as_ref(), channel).await {
-                                            Err(why) => println!("Failed to update mod list (send messages step) in guild {}, channel {} due to a following error: {}", guild, channel, why),
-                                            Ok(message_ids) => {
-                                                {
-                                                    let mut mod_list_messages = mod_list_messages_arc.write().await;
-                                                    mod_list_messages.clear();
-                                                    mod_list_messages.extend(message_ids);
-                                                };
-                                                if let Err(why) = guild_config.read().await.write().await {
-                                                    println!("Failed to write guild config for guild {}: {}", guild, why);
-                                                }
+                        if let Ok(guild_config) = gc_manager.get_guild_config(guild, &ctx2).await {
+                            let mod_list_ic_data_arc = guild_config.read().await.info_channels_data(InfoChannelType::ModList);
+                            let mod_list_ic_data = mod_list_ic_data_arc.read().await;
+                            if mod_list_ic_data.enabled {
+                                let channel = mod_list_ic_data.channel_id;
+                                let mod_list_messages_arc = Arc::clone(&guild_config.read().await.mod_list_messages);
+                                if mod_list_messages_arc.read().await.is_empty() {
+                                    if let Ok(messages) = channel.messages(&ctx2, |gm| gm.limit(MOD_LIST.len() as u64)).await {
+                                        if let Err(why) = channel.delete_messages(&ctx2, messages).await {
+                                            println!("Failed to update mod list (delete old messages step) at guild {} in channel {} due to a following error: {}", guild, channel, why);
+                                        }
+                                    };
+                                    match scheduled_modlist(ctx2.as_ref(), channel).await {
+                                        Err(why) => println!("Failed to update mod list (send messages step) in guild {}, channel {} due to a following error: {}", guild, channel, why),
+                                        Ok(message_ids) => {
+                                            {
+                                                let mut mod_list_messages = mod_list_messages_arc.write().await;
+                                                mod_list_messages.clear();
+                                                mod_list_messages.extend(message_ids);
+                                            };
+                                            if let Err(why) = guild_config.read().await.write().await {
+                                                println!("Failed to write guild config for guild {}: {}", guild, why);
                                             }
                                         }
-                                    } else if let Err(why) = update_mod_list(&ctx2, channel, guild, mod_list_messages_arc).await {
-                                        println!("Failed to updte mod list (updating messages) in guild {}, channel {} due to a following error: {}", guild, channel, why);
                                     }
+                                } else if let Err(why) = update_mod_list(&ctx2, channel, guild, mod_list_messages_arc).await {
+                                    println!("Failed to updte mod list (updating messages) in guild {}, channel {} due to a following error: {}", guild, channel, why);
                                 }
                             }
                         }
@@ -235,8 +229,7 @@ impl EventHandler for Handler {
     // Member joined a guild
     async fn guild_member_addition(&self, ctx: Context, guild_id: GuildId, mut new_member: Member) {
         let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
-        let guild_cached = guild_id.to_guild_cached(&ctx).await.unwrap();
-        if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
+        if let Ok(guild_config) = gc_manager.get_guild_config(guild_id, &ctx).await {
             // Give roles or put on queue
             {
                 let queue = Arc::clone(ctx.data.read().await.get::<RoleQueue>().unwrap());
@@ -266,8 +259,7 @@ impl EventHandler for Handler {
     // Member left a guild, or was banned/kicked
     async fn guild_member_removal(&self, ctx: Context, guild_id: GuildId, user: User, _member_data_if_available: Option<Member>) {
         let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
-        let guild_cached = guild_id.to_guild_cached(&ctx).await.unwrap();
-        if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
+        if let Ok(guild_config) = gc_manager.get_guild_config(guild_id, &ctx).await {
             let welcome_ic_data_arc = guild_config.read().await.info_channels_data(InfoChannelType::Welcome);
             let welcome_ic_data = welcome_ic_data_arc.read().await;
             if welcome_ic_data.enabled {
@@ -305,8 +297,7 @@ async fn my_help(ctx: &Context, msg: &Message, args: Args, hopt: &'static HelpOp
 #[hook]
 async fn before(ctx: &Context, msg: &Message, cmd_name: &str) -> bool {
     let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
-    let guild_cached = msg.guild_id.unwrap().to_guild_cached(ctx).await.unwrap();
-    if let Ok(guild_config) = gc_manager.get_guild_config(&guild_cached).await {
+    if let Ok(guild_config) = gc_manager.get_guild_config(msg.guild_id.unwrap(), ctx).await {
         let guild_config_read = guild_config.read().await;
         let command_filter = guild_config_read.get_command_filter(cmd_name).await;
         return command_filter.read().await.can_run(msg.channel_id).is_ok();
