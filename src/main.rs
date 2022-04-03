@@ -69,7 +69,7 @@ impl Handler {
     async fn log_channel_ban_message(ctx: &Context, guild_id: GuildId, user: &User, banned_by: Option<&User>, ban_reason: Option<String>) {
         let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
         let guild_cached = guild_id.to_guild_cached(&ctx).await.unwrap();
-        if let Ok(guild_config) = gc_manager.get_guild_config(guild_id, ctx).await {
+        if let Ok(guild_config) = gc_manager.get_cached_guild_config(&guild_cached).await {
             let log_ic_data_arc = guild_config.read().await.info_channels_data(InfoChannelType::Log);
             let log_ic_data = log_ic_data_arc.read().await;
             if log_ic_data.enabled {
