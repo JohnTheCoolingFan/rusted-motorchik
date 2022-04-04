@@ -293,9 +293,7 @@ async fn my_help(ctx: &Context, msg: &Message, args: Args, hopt: &'static HelpOp
 
 #[hook]
 async fn before(ctx: &Context, msg: &Message, cmd_name: &str) -> bool {
-    if let Ok(guild_config) = GuildConfigManager::get_guild_config_from_ctx(ctx, msg.guild_id.unwrap()).await {
-        let guild_config_read = guild_config.read().await;
-        let command_filter = guild_config_read.get_command_filter(cmd_name).await;
+    if let Ok(command_filter) = GuildConfigManager::get_command_filter_from_ctx(ctx, msg.guild_id.unwrap(), cmd_name).await {
         return command_filter.read().await.can_run(msg.channel_id).is_ok();
     }
     true
