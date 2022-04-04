@@ -148,6 +148,7 @@ pub struct GuildConfig {
     cf_cache: RwLock<HashMap<String, Arc<RwLock<CommandFilter>>>>,
     config_path: PathBuf,
     pub mod_list_messages: Arc<RwLock<Vec<(String, MessageId)>>>,
+    pub message_link_lookup: bool,
     default_roles: Vec<RoleId>,
     info_channels: HashMap<InfoChannelType, Arc<RwLock<InfoChannelData>>>,
 }
@@ -185,6 +186,7 @@ impl GuildConfig {
             config_path: path,
             cf_cache: RwLock::new(Self::hashmap_wrap_arcrwlock(data.command_filters)),
             mod_list_messages: Arc::new(RwLock::new(data.mod_list_messages)),
+            message_link_lookup: data.message_link_lookup,
             default_roles: data.default_roles,
             info_channels: Self::hashmap_wrap_arcrwlock(data.info_channels)
         }
@@ -203,6 +205,7 @@ impl GuildConfig {
     async fn to_data(&self) -> GuildConfigData {
         GuildConfigData {
             mod_list_messages: Vec::clone(&*self.mod_list_messages.read().await),
+            message_link_lookup: self.message_link_lookup,
             default_roles: self.default_roles.clone(),
             info_channels: Self::unwrap_hashmap_arcrwlock(&self.info_channels).await,
             command_filters: {
@@ -302,6 +305,7 @@ impl GuildConfig {
 struct GuildConfigData {
     //guild_name: String,
     mod_list_messages: Vec<(String, MessageId)>,
+    message_link_lookup: bool,
     default_roles: Vec<RoleId>,
     info_channels: HashMap<InfoChannelType, InfoChannelData>,
     command_filters: HashMap<String, CommandFilter>
@@ -316,6 +320,7 @@ impl GuildConfigData {
     fn new(default_channel: ChannelId) -> Self {
         Self{
             mod_list_messages: Vec::new(),
+            message_link_lookup: true,
             default_roles: vec![],
             info_channels: Self::default_info_channels(default_channel),
             command_filters: HashMap::new()
