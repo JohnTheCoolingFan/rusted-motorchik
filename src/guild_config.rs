@@ -5,6 +5,7 @@ use std::iter;
 use std::path::{PathBuf, Path};
 use std::collections::HashMap;
 use std::sync::Arc;
+use serenity::builder::CreateEmbed;
 use thiserror::Error;
 use serenity::prelude::*;
 use serenity::model::prelude::*;
@@ -299,6 +300,12 @@ impl GuildConfig {
         let cf_entry = cf_cache.entry(command_name.into());
         Arc::clone(cf_entry.or_insert_with(|| Arc::new(RwLock::new(CommandFilter::default()))))
     }
+
+    /// Create an embed with what parameters are set in this GuildConfig
+    pub async fn display_embed<'a, 'b>(&'a self, embed: &'b mut CreateEmbed) -> &'b mut CreateEmbed {
+        let data = self.to_data().await;
+        data.display_embed(embed.title(format!("Config for guild {}", self.guild_id)))
+    }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -325,6 +332,43 @@ impl GuildConfigData {
             info_channels: Self::default_info_channels(default_channel),
             command_filters: HashMap::new()
         }
+    }
+
+    fn display_embed<'a, 'b>(&'a self, embed: &'b mut CreateEmbed) -> &'b mut CreateEmbed {
+        embed
+            .field("Message link lookup", match self.message_link_lookup {
+                true => "Enabled",
+                false => "Disabled"
+            }, false)
+            .field("Default roles", match self.default_roles.is_empty() {
+                true => String::from("None"),
+                false => {
+                    self.default_roles.iter().map(|r| format!("{}", r.mention())).collect::<Vec<String>>().join(", ")
+                }
+            }, false)
+            .field("Info channels", {
+                self.info_channels.iter().map(|(ic_type, ic_data)| {
+                    format!("**`{}`:**\n{}\nChannel: {}", ic_type.as_ref(), match ic_data.enabled {
+                        true => "Enabled",
+                        false => "Disabled"
+                    }, ic_data.channel_id.mention())
+                }).collect::<Vec<String>>().join("\n\n")
+            }, false)
+            .field("Command filters", {
+                self.command_filters.iter().map(|(command_name, command_filter)| {
+                    format!("**`{}`:**\n{}", command_name, match command_filter.filter_type() {
+                        CommandDisability::None => "Enabled in all channels".into(),
+                        CommandDisability::Global => "Disabled in all channels".into(),
+                        _ => {
+                            format!("{} in:\n{}", match command_filter.filter_type() {
+                                CommandDisability::Blacklisted => String::from("Disabled"),
+                                CommandDisability::Whitelisted => String::from("Enabled"),
+                                _ => unreachable!()
+                            }, command_filter.filter_list().iter().map(|c| format!("{}", c.mention())).collect::<Vec<String>>().join("\n"))
+                        }
+                    })
+                }).collect::<Vec<String>>().join("\n\n")
+            }, false)
     }
 }
 
