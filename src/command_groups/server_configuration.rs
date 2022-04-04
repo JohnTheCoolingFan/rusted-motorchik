@@ -77,7 +77,7 @@ async fn blacklist_command(ctx: &Context, msg: &Message, mut args: Args) -> Comm
 }
 
 /// Commands for specifiyng where and which command can be executed.
-#[group("Configuration")]
+#[group("Command Filtering")]
 #[prefix("command")]
 #[only_in(guilds)]
 #[commands(enable_command, disable_command, whitelist_command, blacklist_command)]
