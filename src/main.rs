@@ -111,21 +111,27 @@ impl EventHandler for Handler {
             } else {
                 // Send message preview in reply to a message with a link to a message
                 {
-                    static DISCORD_MESSAGE_LINK_REGEX: OnceCell<Regex> = OnceCell::new();
-                    let links = DISCORD_MESSAGE_LINK_REGEX
-                        .get_or_init(|| Regex::new(r"https://discord.com/channels/[0-9]*/[0-9]*/[0-9]*").unwrap())
-                        .find_iter(&msg.content);
-                    for link in links.map(|l| l.as_str()) {
-                        if let Ok(message) = Message::convert(&ctx, None, None, link).await {
-                            if let Err(why) = msg.channel_id
-                                .send_message(&ctx, |cm| cm.reference_message(&msg)
-                                    .embed(|e| e.author(|cea| cea
-                                            .icon_url(message.author.avatar_url().unwrap_or_default())
-                                            .name(message.author.name)
-                                            .url(link))
-                                    .description(message.content))
-                                    .allowed_mentions(|cam| cam.empty_users().empty_roles().empty_parse())).await {
-                                println!("Failed to reply: {}", why);
+                    if let Some(guild_id) = msg.guild_id {
+                        if let Ok(guild_config) = GuildConfigManager::get_guild_config_from_ctx(&ctx, guild_id).await {
+                            if guild_config.read().await.message_link_lookup {
+                                static DISCORD_MESSAGE_LINK_REGEX: OnceCell<Regex> = OnceCell::new();
+                                let links = DISCORD_MESSAGE_LINK_REGEX
+                                    .get_or_init(|| Regex::new(r"https://discord.com/channels/[0-9]*/[0-9]*/[0-9]*").unwrap())
+                                    .find_iter(&msg.content);
+                                for link in links.map(|l| l.as_str()) {
+                                    if let Ok(message) = Message::convert(&ctx, None, None, link).await {
+                                        if let Err(why) = msg.channel_id
+                                            .send_message(&ctx, |cm| cm.reference_message(&msg)
+                                                .embed(|e| e.author(|cea| cea
+                                                        .icon_url(message.author.avatar_url().unwrap_or_default())
+                                                        .name(message.author.name)
+                                                        .url(link))
+                                                .description(message.content))
+                                                .allowed_mentions(|cam| cam.empty_users().empty_roles().empty_parse())).await {
+                                            println!("Failed to reply: {}", why);
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
