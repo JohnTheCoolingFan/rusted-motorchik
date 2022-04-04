@@ -40,6 +40,7 @@ async fn kick(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         false => Some(args.single::<String>()?)
     };
     let user = user_id.to_user(ctx).await?;
+    msg.guild_id.unwrap().kick(ctx, user_id).await?;
     Handler::log_channel_kick_message(ctx, msg.guild_id.unwrap(), &user, &msg.author, reason).await;
     Ok(())
 }
@@ -58,6 +59,7 @@ async fn ban(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     };
     let ignore_list = Arc::clone(ctx.data.read().await.get::<BanMessageIgnoreList>().unwrap());
     ignore_list.write().await.insert((msg.guild_id.unwrap(), user));
+    msg.guild_id.unwrap().ban(ctx, &user, 0).await?;
     Handler::log_channel_ban_message(ctx, msg.guild_id.unwrap(), &user.to_user(ctx).await?, Some(&msg.author), reason).await;
     Ok(())
 }
