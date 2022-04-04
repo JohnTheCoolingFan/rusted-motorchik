@@ -183,6 +183,7 @@ async fn message_link_lookup(ctx: &Context, msg: &Message, mut args: Args) -> Co
     } else {
         return Err(ServerConfigurationError::InvalidActionTerm(term).into())
     }
+    guild_config.read().await.write().await?;
     Ok(())
 }
 
