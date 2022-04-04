@@ -118,6 +118,12 @@ impl GuildConfigManager {
         let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
         gc_manager.get_guild_config(guild, ctx).await
     }
+
+    pub async fn get_command_filter_from_ctx(ctx: &Context, guild: GuildId, command_name: &str) -> Result<Arc<RwLock<CommandFilter>>, Box<dyn Error + Send + Sync>> {
+        let guild_config = Self::get_guild_config_from_ctx(ctx, guild).await?;
+        let guild_config_read = guild_config.read().await;
+        Ok(guild_config_read.get_command_filter(command_name).await)
+    }
 }
 
 enum GuildConfigGetArgs<'a> {
