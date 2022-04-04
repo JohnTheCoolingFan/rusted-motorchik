@@ -187,12 +187,22 @@ async fn message_link_lookup(ctx: &Context, msg: &Message, mut args: Args) -> Co
     Ok(())
 }
 
+/// Show current config for this guild
+#[command]
+async fn show_config(ctx: &Context, msg: &Message, _: Args) -> CommandResult {
+    let guild_config = GuildConfigManager::get_guild_config_from_ctx(ctx, msg.guild_id.unwrap()).await?;
+    let guild_config_read = guild_config.read().await;
+    let gc_data = guild_config_read.to_data().await;
+    msg.channel_id.send_message(ctx, |cm| cm.embed(|e| guild_config_read.display_embed(gc_data, e))).await?;
+    Ok(())
+}
+
 /// Guild-specific bot settings
 #[group("Server Configuration")]
 #[required_permissions(ADMINISTRATOR)]
 #[sub_groups(ConfigCommands, InfoChannelsCommands)]
 #[only_in(guilds)]
-#[commands(default_roles, message_link_lookup)]
+#[commands(default_roles, message_link_lookup, show_config)]
 struct ServerConfiguration;
 
 #[derive(Debug, Error)]
