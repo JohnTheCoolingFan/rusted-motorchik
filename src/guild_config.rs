@@ -352,6 +352,7 @@ impl EditGuildConfig {
         self
     }
 
+    #[allow(dead_code)]
     /// Alias for [Self::info_channel] with welcome channel dialed in
     pub fn welcome_info_channel<F>(&mut self, f: F) -> &mut Self
     where
@@ -360,6 +361,7 @@ impl EditGuildConfig {
         self.info_channel(InfoChannelType::Welcome, f)
     }
 
+    #[allow(dead_code)]
     /// Alias for [Self::info_channel] with log channel dialed in
     pub fn log_info_channel<F>(&mut self, f: F) -> &mut Self
     where
@@ -368,6 +370,7 @@ impl EditGuildConfig {
         self.info_channel(InfoChannelType::Log, f)
     }
 
+    #[allow(dead_code)]
     /// Alias for [Self::info_channel] with modlist channel dialed in
     pub fn modlist_info_channel<F>(&mut self, f: F) -> &mut Self
     where
