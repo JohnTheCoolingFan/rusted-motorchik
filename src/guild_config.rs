@@ -347,10 +347,10 @@ impl GuildConfigData {
             }, false)
             .field("Info channels", {
                 self.info_channels.iter().map(|(ic_type, ic_data)| {
-                    format!("**`{}`:**\n{}\nChannel: {}", ic_type.as_ref(), match ic_data.enabled {
-                        true => "Enabled",
-                        false => "Disabled"
-                    }, ic_data.channel_id.mention())
+                    format!("**`{}`:**\n{}", ic_type.as_ref(), match ic_data.enabled {
+                        false => "Disabled".into(),
+                        true => format!("Enabled. Channel: {}", ic_data.channel_id.mention()),
+                    })
                 }).collect::<Vec<String>>().join("\n\n")
             }, false)
             .field("Command filters", {
