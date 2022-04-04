@@ -34,11 +34,12 @@ async fn clearchat(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
 #[usage("@Member")]
 #[example("@Wumpus")]
 async fn kick(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let user = args.single::<UserId>()?;
+    let user_id = args.single::<UserId>()?;
     let reason = match args.is_empty() {
         true => None,
         false => Some(args.single::<String>()?)
     };
+    let user = user_id.to_user(ctx).await?;
     Handler::log_channel_kick_message(ctx, msg.guild_id.unwrap(), &user, &msg.author, reason).await;
     Ok(())
 }
