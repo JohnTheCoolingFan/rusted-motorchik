@@ -31,8 +31,8 @@ async fn clearchat(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
 #[command]
 #[required_permissions(KICK_MEMBERS)]
 #[num_args(1)]
-#[usage("@Member")]
-#[example("@Wumpus")]
+#[usage("@Member[, reason]")]
+#[example("@Wumpus, needs to cool off")]
 async fn kick(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let user_id = args.single::<UserId>()?;
     let reason = match args.is_empty() {
@@ -49,8 +49,8 @@ async fn kick(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 #[command]
 #[required_permissions(BAN_MEMBERS)]
 #[num_args(1)]
-#[usage("@Member")]
-#[example("@VeryAgressiveSpammer")]
+#[usage("@Member[, reason]")]
+#[example("@VeryAgressiveSpammer, lots of spam")]
 async fn ban(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let user = args.single::<UserId>()?;
     let reason = match args.is_empty() {
