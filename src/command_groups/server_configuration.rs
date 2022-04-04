@@ -1,4 +1,6 @@
 use std::str::FromStr;
+use std::error::Error;
+use thiserror::Error;
 use serenity::prelude::*;
 use serenity::model::prelude::*;
 use serenity::framework::standard::macros::{command, group};
@@ -167,10 +169,34 @@ async fn default_roles(ctx: &Context, msg: &Message, mut args: Args) -> CommandR
     Ok(())
 }
 
+/// Enable or disable linked message lookup. If enabled, bot will scan for discord message links in
+/// messages and send contents of each linked message in reply.
+#[command]
+#[usage("(enable|disable)")]
+#[example("disable")]
+async fn message_link_lookup(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let term = args.trimmed().quoted().single::<String>()?;
+    let guild_config = GuildConfigManager::get_guild_config_from_ctx(ctx, msg.guild_id.unwrap()).await?;
+    if term == "enable" {
+        guild_config.write().await.message_link_lookup = true;
+    } else if term == "disable" {
+        guild_config.write().await.message_link_lookup = false;
+    } else {
+        return Err(ServerConfigurationError::InvalidActionTerm(term).into())
+    }
+    Ok(())
+}
+
 /// Guild-specific bot settings
 #[group("Server Configuration")]
 #[required_permissions(ADMINISTRATOR)]
 #[sub_groups(ConfigCommands, InfoChannelsCommands)]
 #[only_in(guilds)]
-#[commands(default_roles)]
+#[commands(default_roles, message_link_lookup)]
 struct ServerConfiguration;
+
+#[derive(Debug, Error)]
+pub enum ServerConfigurationError {
+    #[error("Invalid action term: `{0}`")]
+    InvalidActionTerm(String)
+}
