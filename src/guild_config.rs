@@ -203,7 +203,7 @@ impl GuildConfig {
     }
 
     /// Create data object that can be easily serialized
-    async fn to_data(&self) -> GuildConfigData {
+    pub async fn to_data(&self) -> GuildConfigData {
         GuildConfigData {
             mod_list_messages: Vec::clone(&*self.mod_list_messages.read().await),
             message_link_lookup: self.message_link_lookup,
@@ -302,14 +302,13 @@ impl GuildConfig {
     }
 
     /// Create an embed with what parameters are set in this GuildConfig
-    pub async fn display_embed<'a, 'b>(&'a self, embed: &'b mut CreateEmbed) -> &'b mut CreateEmbed {
-        let data = self.to_data().await;
+    pub fn display_embed<'a, 'b>(&'a self, data: GuildConfigData, embed: &'b mut CreateEmbed) -> &'b mut CreateEmbed {
         data.display_embed(embed.title(format!("Config for guild {}", self.guild_id)))
     }
 }
 
 #[derive(Deserialize, Serialize)]
-struct GuildConfigData {
+pub struct GuildConfigData {
     //guild_name: String,
     mod_list_messages: Vec<(String, MessageId)>,
     message_link_lookup: bool,
