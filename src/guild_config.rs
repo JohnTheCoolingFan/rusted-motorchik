@@ -354,18 +354,23 @@ impl GuildConfigData {
                 }).collect::<Vec<String>>().join("\n\n")
             }, false)
             .field("Command filters", {
-                self.command_filters.iter().map(|(command_name, command_filter)| {
-                    format!("**`{}`:**\n{}", command_name, match command_filter.filter_type() {
-                        CommandDisability::None => "Enabled in all channels".into(),
-                        CommandDisability::Global => "Disabled in all channels".into(),
-                        _ => {
-                            format!("{} in:\n{}", match command_filter.filter_type() {
-                                CommandDisability::Blacklisted => String::from("Disabled"),
-                                CommandDisability::Whitelisted => String::from("Enabled"),
-                                _ => unreachable!()
-                            }, command_filter.filter_list().iter().map(|c| format!("{}", c.mention())).collect::<Vec<String>>().join("\n"))
-                        }
-                    })
+                self.command_filters.iter().filter_map(|(command_name, command_filter)| {
+                    if command_filter.filter_type() == CommandDisability::None {
+                        None
+                    } else {
+                        Some(format!("**`{}`:**\n{}",
+                                command_name,
+                                match command_filter.filter_type() {
+                                    CommandDisability::Global => "Disabled in all channels".into(),
+                                    _ => {
+                                        format!("{} in:\n{}", match command_filter.filter_type() {
+                                            CommandDisability::Blacklisted => String::from("Disabled"),
+                                            CommandDisability::Whitelisted => String::from("Enabled"),
+                                            _ => unreachable!()
+                                        }, command_filter.filter_list().iter().map(|c| format!("{}", c.mention())).collect::<Vec<String>>().join("\n"))
+                                    }
+                                }))
+                    }
                 }).collect::<Vec<String>>().join("\n\n")
             }, false)
     }
