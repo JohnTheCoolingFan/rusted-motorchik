@@ -1,5 +1,4 @@
 use std::str::FromStr;
-use std::error::Error;
 use thiserror::Error;
 use serenity::prelude::*;
 use serenity::model::prelude::*;
