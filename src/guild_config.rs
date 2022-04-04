@@ -354,7 +354,7 @@ impl GuildConfigData {
                 }).collect::<Vec<String>>().join("\n\n")
             }, false)
             .field("Command filters", {
-                self.command_filters.iter().filter_map(|(command_name, command_filter)| {
+                let command_filters_str = self.command_filters.iter().filter_map(|(command_name, command_filter)| {
                     if command_filter.filter_type() == CommandDisability::None {
                         None
                     } else {
@@ -371,7 +371,12 @@ impl GuildConfigData {
                                     }
                                 }))
                     }
-                }).collect::<Vec<String>>().join("\n\n")
+                }).collect::<Vec<String>>().join("\n\n");
+                if command_filters_str.is_empty() {
+                    "None".into()
+                } else {
+                    command_filters_str
+                }
             }, false)
     }
 }
