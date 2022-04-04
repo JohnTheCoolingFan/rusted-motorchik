@@ -365,7 +365,7 @@ impl GuildConfigData {
                                     _ => {
                                         format!("{} in:\n{}", match command_filter.filter_type() {
                                             CommandDisability::Blacklisted => String::from("Disabled"),
-                                            CommandDisability::Whitelisted => String::from("Enabled"),
+                                            CommandDisability::Whitelisted => String::from("Enabled only"),
                                             _ => unreachable!()
                                         }, command_filter.filter_list().iter().map(|c| format!("{}", c.mention())).collect::<Vec<String>>().join("\n"))
                                     }
