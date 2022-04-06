@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::sync::Arc;
 use std::error::Error;
 use thiserror::Error;
@@ -12,7 +13,7 @@ use reqwest::{self, StatusCode};
 use serde::Deserialize;
 use semver::Version;
 
-use crate::guild_config::{GuildConfig, InfoChannelType};
+use crate::guild_config::{GuildConfig, InfoChannelType, GuildConfigManager};
 
 pub const MOD_LIST: [&str; 6] = ["artillery-spidertron", "PlaceableOffGrid", "NoArtilleryMapReveal", "RandomFactorioThings", "PlutoniumEnergy", "ReactorDansen"];
 
@@ -102,17 +103,38 @@ async fn mods_statistics(ctx: &Context, msg: &Message, mut args: Args) -> Comman
 /// Change mod-list info channel mods
 #[command]
 #[aliases(ml)]
-async fn modlist(ctx: &Context, msg: &Message) -> CommandResult {
-    for mod_name in MOD_LIST {
-        process_mod(ctx, msg.channel_id, mod_name).await?;
-    }
+#[usage("mod name[, mod name, ...]")]
+#[example("Random Factorio Things, Krastorio 2")]
+#[only_in(guilds)]
+async fn modlist(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let guild_config = GuildConfigManager::get_guild_config_from_ctx(ctx, msg.guild_id.unwrap()).await?;
+    let guild_config_read = guild_config.read().await;
+    let channel = {
+        if guild_config_read.mod_list_messages.read().await.is_empty() {
+            let modlist_ic_data = guild_config_read.info_channels_data(InfoChannelType::ModList);
+            let channel = modlist_ic_data.read().await.channel_id; channel
+        } else {
+            let message = Message::convert(ctx, Some(msg.guild_id.unwrap()), None, &format!("{}", guild_config_read.mod_list_messages.read().await.get(0).unwrap().1)).await?;
+            message.channel_id
+        }
+    };
+    let mod_list: Result<Vec<String>, _> = Result::from_iter(args.quoted().trimmed().iter::<String>());
+    let mod_list = mod_list?;
+    for (_, message_id) in &*guild_config_read.mod_list_messages.read().await {
+        let message = Message::convert(ctx, Some(msg.guild_id.unwrap()), Some(channel), &message_id.to_string()).await?;
+        message.delete(ctx).await?
+    };
+    let mut mlm_write = guild_config_read.mod_list_messages.write().await;
+    mlm_write.clear();
+    let mod_list_messages = scheduled_modlist(ctx, channel, mod_list).await?;
+    mlm_write.extend(mod_list_messages);
     Ok(())
 }
 
-pub async fn scheduled_modlist(ctx: &Context, channel: ChannelId) -> std::result::Result<Vec<(String, MessageId)>, CommandError> {
+pub async fn scheduled_modlist<T: AsRef<str>>(ctx: &Context, channel: ChannelId, mod_list: impl AsRef<[T]>) -> std::result::Result<Vec<(String, MessageId)>, CommandError> {
     let mut result = Vec::new();
-    for mod_name in MOD_LIST {
-        result.push((mod_name.into(), process_mod(ctx, channel, mod_name).await?));
+    for mod_name in mod_list.as_ref() {
+        result.push((mod_name.as_ref().into(), process_mod(ctx, channel, mod_name.as_ref()).await?));
     }
     Ok(result)
 }
@@ -152,7 +174,7 @@ pub async fn update_mod_list(ctx: &Context, guild: GuildId, guild_config: Arc<Rw
         if mod_list_messages_arc.read().await.is_empty() {
             let messages = channel.messages(ctx, |gm| gm.limit(MOD_LIST.len() as u64)).await?;
             channel.delete_messages(ctx, messages).await?;
-            match scheduled_modlist(ctx, channel).await {
+            match scheduled_modlist(ctx, channel, &MOD_LIST).await {
                 Err(why) => println!("Failed to update mod list (send messages step) in guild {}, channel {} due to a following error: {}", guild, channel, why),
                 Ok(message_ids) => {
                     {
