@@ -99,7 +99,7 @@ async fn mods_statistics(ctx: &Context, msg: &Message, mut args: Args) -> Comman
     Ok(())
 }
 
-/// Run mods_statistics for each mod from the list (hard-coded).
+/// Change mod-list info channel mods
 #[command]
 #[aliases(ml)]
 async fn modlist(ctx: &Context, msg: &Message) -> CommandResult {
