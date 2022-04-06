@@ -109,13 +109,8 @@ async fn modlist(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
     let guild_config = GuildConfigManager::get_guild_config_from_ctx(ctx, msg.guild_id.unwrap()).await?;
     let guild_config_read = guild_config.read().await;
     let channel = {
-        if guild_config_read.mod_list_messages.read().await.is_empty() {
-            let modlist_ic_data = guild_config_read.info_channels_data(InfoChannelType::ModList);
-            let channel = modlist_ic_data.read().await.channel_id; channel
-        } else {
-            let message = Message::convert(ctx, Some(msg.guild_id.unwrap()), None, &format!("{}", guild_config_read.mod_list_messages.read().await.get(0).unwrap().1)).await?;
-            message.channel_id
-        }
+        let modlist_ic_data = guild_config_read.info_channels_data(InfoChannelType::ModList);
+        let channel = modlist_ic_data.read().await.channel_id; channel
     };
     let mod_list: Result<Vec<String>, _> = Result::from_iter(args.quoted().trimmed().iter::<String>());
     let mod_list = mod_list?;
@@ -123,10 +118,13 @@ async fn modlist(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
         let message = Message::convert(ctx, Some(msg.guild_id.unwrap()), Some(channel), &message_id.to_string()).await?;
         message.delete(ctx).await?
     };
-    let mut mlm_write = guild_config_read.mod_list_messages.write().await;
-    mlm_write.clear();
-    let mod_list_messages = scheduled_modlist(ctx, channel, mod_list).await?;
-    mlm_write.extend(mod_list_messages);
+    {
+        let mut mlm_write = guild_config_read.mod_list_messages.write().await;
+        mlm_write.clear();
+        let mod_list_messages = scheduled_modlist(ctx, channel, mod_list).await?;
+        mlm_write.extend(mod_list_messages);
+    }
+    guild_config_read.write().await?;
     Ok(())
 }
 
