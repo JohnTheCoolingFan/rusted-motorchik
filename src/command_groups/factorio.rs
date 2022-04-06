@@ -129,7 +129,7 @@ pub async fn reply_process_mod(ctx: &Context, msg: &Message, mod_name: &str) -> 
     Ok(())
 }
 
-pub async fn update_mod_list(ctx: &Context, channel: ChannelId, guild: GuildId, messages: Arc<RwLock<Vec<(String, MessageId)>>>) -> CommandResult {
+pub async fn edit_update_mod_list(ctx: &Context, channel: ChannelId, guild: GuildId, messages: Arc<RwLock<Vec<(String, MessageId)>>>) -> CommandResult {
     for (mod_name, message_id) in &*messages.read().await {
         let message_id = message_id.to_string();
         let mut message = Message::convert(ctx, Some(guild), Some(channel), &message_id).await?;

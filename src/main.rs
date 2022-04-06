@@ -223,7 +223,7 @@ impl EventHandler for Handler {
                                             }
                                         }
                                     }
-                                } else if let Err(why) = update_mod_list(&ctx2, channel, guild, mod_list_messages_arc).await {
+                                } else if let Err(why) = edit_update_mod_list(&ctx2, channel, guild, mod_list_messages_arc).await {
                                     println!("Failed to updte mod list (updating messages) in guild {}, channel {} due to a following error: {}", guild, channel, why);
                                 }
                             }
