@@ -12,6 +12,8 @@ use reqwest::{self, StatusCode};
 use serde::Deserialize;
 use semver::Version;
 
+use crate::guild_config::{GuildConfig, InfoChannelType};
+
 pub const MOD_LIST: [&str; 6] = ["artillery-spidertron", "PlaceableOffGrid", "NoArtilleryMapReveal", "RandomFactorioThings", "PlutoniumEnergy", "ReactorDansen"];
 
 const MODPORTAL_URL: &str = "https://mods.factorio.com";
@@ -137,6 +139,33 @@ pub async fn edit_update_mod_list(ctx: &Context, channel: ChannelId, guild: Guil
         message.edit(&ctx.http, |ed| ed.embed(|e| {
             ModData::result_to_embed(e, mod_data, mod_name)
         })).await?;
+    }
+    Ok(())
+}
+
+pub async fn update_mod_list(ctx: &Context, guild: GuildId, guild_config: Arc<RwLock<GuildConfig>>) -> CommandResult {
+    let mod_list_ic_data_arc = guild_config.read().await.info_channels_data(InfoChannelType::ModList);
+    let mod_list_ic_data = mod_list_ic_data_arc.read().await;
+    if mod_list_ic_data.enabled {
+        let channel = mod_list_ic_data.channel_id;
+        let mod_list_messages_arc = Arc::clone(&guild_config.read().await.mod_list_messages);
+        if mod_list_messages_arc.read().await.is_empty() {
+            let messages = channel.messages(ctx, |gm| gm.limit(MOD_LIST.len() as u64)).await?;
+            channel.delete_messages(ctx, messages).await?;
+            match scheduled_modlist(ctx, channel).await {
+                Err(why) => println!("Failed to update mod list (send messages step) in guild {}, channel {} due to a following error: {}", guild, channel, why),
+                Ok(message_ids) => {
+                    {
+                        let mut mod_list_messages = mod_list_messages_arc.write().await;
+                        mod_list_messages.clear();
+                        mod_list_messages.extend(message_ids);
+                    };
+                    guild_config.read().await.write().await?;
+                }
+            }
+        } else {
+            edit_update_mod_list(ctx, channel, guild, mod_list_messages_arc).await?;
+        }
     }
     Ok(())
 }
