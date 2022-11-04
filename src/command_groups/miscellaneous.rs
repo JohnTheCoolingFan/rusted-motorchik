@@ -38,7 +38,7 @@ async fn hostinfo(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id.send_message(&ctx.http, |m| {
         m.embed(|e| {
             e.title("Host info")
-                .timestamp(&Utc::now())
+                .timestamp(Utc::now())
                 .color((47, 137, 197))
                 .field("Hostname", match system_info.host_name() {
                     Some(host) => host,
