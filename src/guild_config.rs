@@ -1,36 +1,47 @@
-use std::hash::Hash;
-use std::fs::File;
-use std::error::Error;
-use std::iter;
-use std::path::{PathBuf, Path};
-use std::collections::HashMap;
-use std::sync::Arc;
-use serenity::builder::CreateEmbed;
-use thiserror::Error;
-use serenity::prelude::*;
-use serenity::model::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use strum_macros::{EnumString, AsRefStr, EnumIter};
+use serenity::builder::CreateEmbed;
+use serenity::model::prelude::*;
+use serenity::prelude::*;
+use std::collections::HashMap;
+use std::error::Error;
+use std::fs::File;
+use std::hash::Hash;
+use std::iter;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use strum::IntoEnumIterator;
+use strum_macros::{AsRefStr, EnumIter, EnumString};
+use thiserror::Error;
 
 #[cfg(test)]
 use std::str::FromStr;
 
-#[derive(Debug, EnumString, AsRefStr, Hash, Eq, PartialEq, Clone, Copy, Deserialize, Serialize, EnumIter)]
+#[derive(
+    Debug, EnumString, AsRefStr, Hash, Eq, PartialEq, Clone, Copy, Deserialize, Serialize, EnumIter,
+)]
 #[serde(rename_all = "kebab-case")]
 #[strum(serialize_all = "kebab-case")]
 pub enum InfoChannelType {
     Welcome,
     Log,
-    ModList
+    ModList,
 }
 
 #[test]
 fn info_channel_type_parse() {
-    assert_eq!(InfoChannelType::Welcome, InfoChannelType::from_str("welcome").unwrap());
-    assert_eq!(InfoChannelType::Log, InfoChannelType::from_str("log").unwrap());
-    assert_eq!(InfoChannelType::ModList, InfoChannelType::from_str("mod-list").unwrap());
+    assert_eq!(
+        InfoChannelType::Welcome,
+        InfoChannelType::from_str("welcome").unwrap()
+    );
+    assert_eq!(
+        InfoChannelType::Log,
+        InfoChannelType::from_str("log").unwrap()
+    );
+    assert_eq!(
+        InfoChannelType::ModList,
+        InfoChannelType::from_str("mod-list").unwrap()
+    );
 }
 
 #[repr(u8)]
@@ -39,7 +50,7 @@ pub enum CommandDisability {
     None = 0,
     Global = 1,
     Blacklisted = 2,
-    Whitelisted = 3
+    Whitelisted = 3,
 }
 
 impl Default for CommandDisability {
@@ -50,7 +61,7 @@ impl Default for CommandDisability {
 
 pub struct GuildConfigManager {
     gc_cache: RwLock<HashMap<GuildId, Arc<RwLock<GuildConfig>>>>,
-    config_path: PathBuf
+    config_path: PathBuf,
 }
 
 impl TypeMapKey for GuildConfigManager {
@@ -61,30 +72,43 @@ impl GuildConfigManager {
     /// Inititalise GuildConfigManager
     pub fn new(path: impl Into<PathBuf>) -> Self {
         let path = path.into();
-        println!("Guild config home: {:?}", path);
+        println!("Guild config home: {path:?}");
         if !path.exists() {
-            println!("{:?} doesn't exist, creating", path);
+            println!("{path:?} doesn't exist, creating");
             std::fs::create_dir(&path).unwrap();
         }
-        Self{gc_cache: RwLock::new(HashMap::new()), config_path: path}
+        Self {
+            gc_cache: RwLock::new(HashMap::new()),
+            config_path: path,
+        }
     }
 
     /// Get guild config from manager
-    pub async fn get_guild_config(&self, guild_id: GuildId, ctx: &Context) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
+    pub async fn get_guild_config(
+        &self,
+        guild_id: GuildId,
+        ctx: &Context,
+    ) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
         self._get_guild_config((guild_id, ctx)).await
     }
 
     /// Get guild config from manager using a cached guild
-    pub async fn get_cached_guild_config(&self, guild: &Guild) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
+    pub async fn get_cached_guild_config(
+        &self,
+        guild: &Guild,
+    ) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
         self._get_guild_config(guild).await
     }
 
     /// Accepts either a combination of GuildId and &Context or &Guild
-    async fn _get_guild_config(&self, guild: impl Into<GuildConfigGetArgs<'_>>) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
+    async fn _get_guild_config(
+        &self,
+        guild: impl Into<GuildConfigGetArgs<'_>>,
+    ) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
         let guild = guild.into();
         let guild_id = match guild {
             GuildConfigGetArgs::IdAndContext(id, _) => id,
-            GuildConfigGetArgs::CachedGuild(g) => g.id
+            GuildConfigGetArgs::CachedGuild(g) => g.id,
         };
         if !self.is_cached(guild_id).await {
             let mut gc_cache = self.gc_cache.write().await;
@@ -93,11 +117,24 @@ impl GuildConfigManager {
             } else {
                 match guild {
                     GuildConfigGetArgs::IdAndContext(id, ctx) => {
-                        let guild_cached = id.to_guild_cached(ctx).await.ok_or(GuildConfigError::GuildCacheFailed(id))?;
-                        gc_cache.insert(guild_id, Arc::new(RwLock::new(GuildConfig::new(&guild_cached, &self.config_path).await?)));
-                    },
+                        let guild_cached = id
+                            .to_guild_cached(ctx)
+                            .await
+                            .ok_or(GuildConfigError::GuildCacheFailed(id))?;
+                        gc_cache.insert(
+                            guild_id,
+                            Arc::new(RwLock::new(
+                                GuildConfig::new(&guild_cached, &self.config_path).await?,
+                            )),
+                        );
+                    }
                     GuildConfigGetArgs::CachedGuild(guild_cached) => {
-                        gc_cache.insert(guild_id, Arc::new(RwLock::new(GuildConfig::new(guild_cached, &self.config_path).await?)));
+                        gc_cache.insert(
+                            guild_id,
+                            Arc::new(RwLock::new(
+                                GuildConfig::new(guild_cached, &self.config_path).await?,
+                            )),
+                        );
                     }
                 };
             }
@@ -115,12 +152,19 @@ impl GuildConfigManager {
     /// Get GuildConfig with just a Context and guild id.
     /// Re-retrieves guild config manager for each call, if multiple guill configs are needed,
     /// better to use get_guild_config instead
-    pub async fn get_guild_config_from_ctx(ctx: &Context, guild: GuildId) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
+    pub async fn get_guild_config_from_ctx(
+        ctx: &Context,
+        guild: GuildId,
+    ) -> Result<Arc<RwLock<GuildConfig>>, Box<dyn Error + Send + Sync>> {
         let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
         gc_manager.get_guild_config(guild, ctx).await
     }
 
-    pub async fn get_command_filter_from_ctx(ctx: &Context, guild: GuildId, command_name: &str) -> Result<Arc<RwLock<CommandFilter>>, Box<dyn Error + Send + Sync>> {
+    pub async fn get_command_filter_from_ctx(
+        ctx: &Context,
+        guild: GuildId,
+        command_name: &str,
+    ) -> Result<Arc<RwLock<CommandFilter>>, Box<dyn Error + Send + Sync>> {
         let guild_config = Self::get_guild_config_from_ctx(ctx, guild).await?;
         let guild_config_read = guild_config.read().await;
         Ok(guild_config_read.get_command_filter(command_name).await)
@@ -129,7 +173,7 @@ impl GuildConfigManager {
 
 enum GuildConfigGetArgs<'a> {
     IdAndContext(GuildId, &'a Context),
-    CachedGuild(&'a Guild)
+    CachedGuild(&'a Guild),
 }
 
 impl<'a> From<(GuildId, &'a Context)> for GuildConfigGetArgs<'a> {
@@ -157,7 +201,8 @@ pub struct GuildConfig {
 impl GuildConfig {
     /// Create new instance of GuildConfig
     async fn new(guild: &Guild, config_path: &Path) -> Result<Self, Box<dyn Error + Send + Sync>> {
-        let guild_config_data = GuildConfigData::new(guild.system_channel_id.unwrap_or(ChannelId(0)));
+        let guild_config_data =
+            GuildConfigData::new(guild.system_channel_id.unwrap_or(ChannelId(0)));
         let path = config_path.join(format!("guild_{}.json", guild.id));
         let result = Self::from_data(guild_config_data, guild.id, path);
         result.write().await?;
@@ -166,7 +211,7 @@ impl GuildConfig {
 
     /// Read GuildConfig data from file and create Self
     fn read(guild_id: GuildId, config_path: &Path) -> Result<Self, Box<dyn Error + Send + Sync>> {
-        let path = config_path.join(format!("guild_{}.json", guild_id));
+        let path = config_path.join(format!("guild_{guild_id}.json"));
         let file = File::open(&path)?;
         let data = serde_json::from_reader(file)?;
         Ok(Self::from_data(data, guild_id, path))
@@ -189,12 +234,12 @@ impl GuildConfig {
             mod_list_messages: Arc::new(RwLock::new(data.mod_list_messages)),
             message_link_lookup: data.message_link_lookup,
             default_roles: data.default_roles,
-            info_channels: Self::hashmap_wrap_arcrwlock(data.info_channels)
+            info_channels: Self::hashmap_wrap_arcrwlock(data.info_channels),
         }
     }
 
     /// Helper function to wrap deserialized data in Arc<RwLock<>> (serde does not support tokio's
-    /// async RwLock, sadly) 
+    /// async RwLock, sadly)
     fn hashmap_wrap_arcrwlock<K, V>(mut hashmap: HashMap<K, V>) -> HashMap<K, Arc<RwLock<V>>>
     where
         K: Eq + Hash,
@@ -212,7 +257,7 @@ impl GuildConfig {
             command_filters: {
                 let command_filters = self.cf_cache.read().await;
                 Self::unwrap_hashmap_arcrwlock(&*command_filters).await
-            }
+            },
         }
     }
 
@@ -234,11 +279,13 @@ impl GuildConfig {
     /// instead of editing small details sequentially
     pub async fn edit<F>(&mut self, f: F) -> Result<(), Box<dyn Error + Send + Sync>>
     where
-        F: FnOnce(&mut EditGuildConfig) -> &mut EditGuildConfig
+        F: FnOnce(&mut EditGuildConfig) -> &mut EditGuildConfig,
     {
         let mut edit_guild_config = EditGuildConfig::default();
         f(&mut edit_guild_config);
-        if !(edit_guild_config.default_roles.is_none() && edit_guild_config.info_channels.is_empty()) {
+        if !(edit_guild_config.default_roles.is_none()
+            && edit_guild_config.info_channels.is_empty())
+        {
             if let Some(def_roles) = edit_guild_config.default_roles {
                 self.default_roles = def_roles;
             }
@@ -261,9 +308,13 @@ impl GuildConfig {
     }
 
     /// Edit command filter for this guild and this name
-    pub async fn edit_command_filter<F>(&mut self, command_name: &str, f: F) -> Result<(), Box<dyn Error + Send + Sync>>
+    pub async fn edit_command_filter<F>(
+        &mut self,
+        command_name: &str,
+        f: F,
+    ) -> Result<(), Box<dyn Error + Send + Sync>>
     where
-        F: FnOnce(&mut EditCommandFilter) -> &mut EditCommandFilter
+        F: FnOnce(&mut EditCommandFilter) -> &mut EditCommandFilter,
     {
         let mut cf_edit = EditCommandFilter::default();
         f(&mut cf_edit);
@@ -288,9 +339,12 @@ impl GuildConfig {
     pub fn default_roles(&self) -> &Vec<RoleId> {
         &self.default_roles
     }
-    
+
     /// Accessor
-    pub fn info_channels_data(&self, info_channel: InfoChannelType) -> Arc<RwLock<InfoChannelData>> {
+    pub fn info_channels_data(
+        &self,
+        info_channel: InfoChannelType,
+    ) -> Arc<RwLock<InfoChannelData>> {
         Arc::clone(self.info_channels.get(&info_channel).unwrap())
     }
 
@@ -302,7 +356,11 @@ impl GuildConfig {
     }
 
     /// Create an embed with what parameters are set in this GuildConfig
-    pub fn display_embed<'a, 'b>(&'a self, data: GuildConfigData, embed: &'b mut CreateEmbed) -> &'b mut CreateEmbed {
+    pub fn display_embed<'a>(
+        &self,
+        data: GuildConfigData,
+        embed: &'a mut CreateEmbed,
+    ) -> &'a mut CreateEmbed {
         data.display_embed(embed.title(format!("Config for guild {}", self.guild_id)))
     }
 }
@@ -314,77 +372,128 @@ pub struct GuildConfigData {
     message_link_lookup: bool,
     default_roles: Vec<RoleId>,
     info_channels: HashMap<InfoChannelType, InfoChannelData>,
-    command_filters: HashMap<String, CommandFilter>
+    command_filters: HashMap<String, CommandFilter>,
 }
 
 impl GuildConfigData {
     fn default_info_channels(channel: ChannelId) -> HashMap<InfoChannelType, InfoChannelData> {
-        HashMap::from_iter(InfoChannelType::iter()
-            .zip(iter::repeat(InfoChannelData{channel_id:channel, enabled:false})))
+        HashMap::from_iter(InfoChannelType::iter().zip(iter::repeat(InfoChannelData {
+            channel_id: channel,
+            enabled: false,
+        })))
     }
 
     fn new(default_channel: ChannelId) -> Self {
-        Self{
+        Self {
             mod_list_messages: Vec::new(),
             message_link_lookup: true,
             default_roles: vec![],
             info_channels: Self::default_info_channels(default_channel),
-            command_filters: HashMap::new()
+            command_filters: HashMap::new(),
         }
     }
 
-    fn display_embed<'a, 'b>(&'a self, embed: &'b mut CreateEmbed) -> &'b mut CreateEmbed {
+    fn display_embed<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
         embed
-            .field("Message link lookup", match self.message_link_lookup {
-                true => "Enabled",
-                false => "Disabled"
-            }, false)
-            .field("Default roles", match self.default_roles.is_empty() {
-                true => String::from("None"),
-                false => {
-                    self.default_roles.iter().map(|r| format!("{}", r.mention())).collect::<Vec<String>>().join(", ")
-                }
-            }, false)
-            .field("Info channels", {
-                self.info_channels.iter().map(|(ic_type, ic_data)| {
-                    format!("**`{}`:**\n{}", ic_type.as_ref(), match ic_data.enabled {
-                        false => "Disabled".into(),
-                        true => format!("Enabled. Channel: {}", ic_data.channel_id.mention()),
-                    })
-                }).collect::<Vec<String>>().join("\n\n")
-            }, false)
-            .field("Command filters", {
-                let command_filters_str = self.command_filters.iter().filter_map(|(command_name, command_filter)| {
-                    if command_filter.filter_type() == CommandDisability::None {
-                        None
-                    } else {
-                        Some(format!("**`{}`:**\n{}",
-                                command_name,
-                                match command_filter.filter_type() {
-                                    CommandDisability::Global => "Disabled in all channels".into(),
-                                    _ => {
-                                        format!("{} in:\n{}", match command_filter.filter_type() {
-                                            CommandDisability::Blacklisted => String::from("Disabled"),
-                                            CommandDisability::Whitelisted => String::from("Enabled only"),
-                                            _ => unreachable!()
-                                        }, command_filter.filter_list().iter().map(|c| format!("{}", c.mention())).collect::<Vec<String>>().join("\n"))
+            .field(
+                "Message link lookup",
+                match self.message_link_lookup {
+                    true => "Enabled",
+                    false => "Disabled",
+                },
+                false,
+            )
+            .field(
+                "Default roles",
+                match self.default_roles.is_empty() {
+                    true => String::from("None"),
+                    false => self
+                        .default_roles
+                        .iter()
+                        .map(|r| format!("{}", r.mention()))
+                        .collect::<Vec<String>>()
+                        .join(", "),
+                },
+                false,
+            )
+            .field(
+                "Info channels",
+                {
+                    self.info_channels
+                        .iter()
+                        .map(|(ic_type, ic_data)| {
+                            format!(
+                                "**`{}`:**\n{}",
+                                ic_type.as_ref(),
+                                match ic_data.enabled {
+                                    false => "Disabled".into(),
+                                    true => format!(
+                                        "Enabled. Channel: {}",
+                                        ic_data.channel_id.mention()
+                                    ),
+                                }
+                            )
+                        })
+                        .collect::<Vec<String>>()
+                        .join("\n\n")
+                },
+                false,
+            )
+            .field(
+                "Command filters",
+                {
+                    let command_filters_str = self
+                        .command_filters
+                        .iter()
+                        .filter_map(|(command_name, command_filter)| {
+                            if command_filter.filter_type() == CommandDisability::None {
+                                None
+                            } else {
+                                Some(format!(
+                                    "**`{}`:**\n{}",
+                                    command_name,
+                                    match command_filter.filter_type() {
+                                        CommandDisability::Global =>
+                                            "Disabled in all channels".into(),
+                                        _ => {
+                                            format!(
+                                                "{} in:\n{}",
+                                                match command_filter.filter_type() {
+                                                    CommandDisability::Blacklisted =>
+                                                        String::from("Disabled"),
+                                                    CommandDisability::Whitelisted =>
+                                                        String::from("Enabled only"),
+                                                    _ => unreachable!(),
+                                                },
+                                                command_filter
+                                                    .filter_list()
+                                                    .iter()
+                                                    .map(|c| format!("{}", c.mention()))
+                                                    .collect::<Vec<String>>()
+                                                    .join("\n")
+                                            )
+                                        }
                                     }
-                                }))
+                                ))
+                            }
+                        })
+                        .collect::<Vec<String>>()
+                        .join("\n\n");
+                    if command_filters_str.is_empty() {
+                        "None".into()
+                    } else {
+                        command_filters_str
                     }
-                }).collect::<Vec<String>>().join("\n\n");
-                if command_filters_str.is_empty() {
-                    "None".into()
-                } else {
-                    command_filters_str
-                }
-            }, false)
+                },
+                false,
+            )
     }
 }
 
 #[derive(Default)]
 pub struct EditGuildConfig {
     default_roles: Option<Vec<RoleId>>,
-    info_channels: HashMap<InfoChannelType, EditInfoChannel>
+    info_channels: HashMap<InfoChannelType, EditInfoChannel>,
 }
 
 impl EditGuildConfig {
@@ -397,7 +506,7 @@ impl EditGuildConfig {
     /// Set changes for InfoChannels
     pub fn info_channel<F>(&mut self, ic_type: InfoChannelType, f: F) -> &mut Self
     where
-        F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel
+        F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel,
     {
         let mut edit_ic = EditInfoChannel::default();
         f(&mut edit_ic);
@@ -409,7 +518,7 @@ impl EditGuildConfig {
     /// Alias for [Self::info_channel] with welcome channel dialed in
     pub fn welcome_info_channel<F>(&mut self, f: F) -> &mut Self
     where
-        F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel
+        F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel,
     {
         self.info_channel(InfoChannelType::Welcome, f)
     }
@@ -418,7 +527,7 @@ impl EditGuildConfig {
     /// Alias for [Self::info_channel] with log channel dialed in
     pub fn log_info_channel<F>(&mut self, f: F) -> &mut Self
     where
-        F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel
+        F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel,
     {
         self.info_channel(InfoChannelType::Log, f)
     }
@@ -427,7 +536,7 @@ impl EditGuildConfig {
     /// Alias for [Self::info_channel] with modlist channel dialed in
     pub fn modlist_info_channel<F>(&mut self, f: F) -> &mut Self
     where
-        F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel
+        F: FnOnce(&mut EditInfoChannel) -> &mut EditInfoChannel,
     {
         self.info_channel(InfoChannelType::ModList, f)
     }
@@ -436,13 +545,13 @@ impl EditGuildConfig {
 #[derive(Deserialize, Serialize, Clone)]
 pub struct InfoChannelData {
     pub channel_id: ChannelId,
-    pub enabled: bool
+    pub enabled: bool,
 }
 
 #[derive(Default)]
 pub struct EditInfoChannel {
     state: Option<bool>,
-    channel: Option<ChannelId>
+    channel: Option<ChannelId>,
 }
 
 impl EditInfoChannel {
@@ -467,22 +576,21 @@ pub struct CommandFilter {
 }
 
 impl CommandFilter {
-    pub fn can_run(&self, channel_id: ChannelId) -> std::result::Result<CommandDisability, CommandDisability> {
+    pub fn can_run(
+        &self,
+        channel_id: ChannelId,
+    ) -> std::result::Result<CommandDisability, CommandDisability> {
         match self.filter_type() {
             CommandDisability::None => Ok(CommandDisability::None),
             CommandDisability::Global => Err(CommandDisability::Global),
-            CommandDisability::Blacklisted => {
-                match self.filter_list().contains(&channel_id) {
-                    true => Err(CommandDisability::Blacklisted),
-                    false => Ok(CommandDisability::Blacklisted)
-                }
+            CommandDisability::Blacklisted => match self.filter_list().contains(&channel_id) {
+                true => Err(CommandDisability::Blacklisted),
+                false => Ok(CommandDisability::Blacklisted),
             },
-            CommandDisability::Whitelisted => {
-                match self.filter_list().contains(&channel_id) {
-                    true => Ok(CommandDisability::Whitelisted),
-                    false => Err(CommandDisability::Whitelisted)
-                }
-            }
+            CommandDisability::Whitelisted => match self.filter_list().contains(&channel_id) {
+                true => Ok(CommandDisability::Whitelisted),
+                false => Err(CommandDisability::Whitelisted),
+            },
         }
     }
 
@@ -498,7 +606,7 @@ impl CommandFilter {
 #[derive(Default)]
 pub struct EditCommandFilter {
     filter_type: Option<CommandDisability>,
-    channels: Option<Vec<ChannelId>>
+    channels: Option<Vec<ChannelId>>,
 }
 
 impl EditCommandFilter {
@@ -527,5 +635,5 @@ impl EditCommandFilter {
 #[derive(Debug, Error)]
 pub enum GuildConfigError {
     #[error("Failed to fetch guild {0} from cache")]
-    GuildCacheFailed(GuildId)
+    GuildCacheFailed(GuildId),
 }

@@ -1,9 +1,9 @@
-use std::env;
+use chrono::offset::Utc;
 use serenity::client::Context;
-use serenity::model::channel::Message;
 use serenity::framework::standard::macros::{command, group};
 use serenity::framework::standard::CommandResult;
-use chrono::offset::Utc;
+use serenity::model::channel::Message;
+use std::env;
 use sysinfo::SystemExt;
 
 const GITHUB_URL: &str = "https://github.com/JohnTheCoolingFan/rusted-motorchik";
@@ -26,7 +26,12 @@ async fn gitlab(ctx: &Context, msg: &Message) -> CommandResult {
 /// Send source code links
 #[command]
 async fn source(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(&ctx.http, format!("Choose whichever you want:\nGitHub: {}\nGitLab: {}", GITHUB_URL, GITLAB_URL)).await?;
+    msg.channel_id
+        .say(
+            &ctx.http,
+            format!("Choose whichever you want:\nGitHub: {GITHUB_URL}\nGitLab: {GITLAB_URL}"),
+        )
+        .await?;
     Ok(())
 }
 
@@ -35,20 +40,29 @@ async fn source(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 async fn hostinfo(ctx: &Context, msg: &Message) -> CommandResult {
     let system_info = sysinfo::System::default();
-    msg.channel_id.send_message(&ctx.http, |m| {
-        m.embed(|e| {
-            e.title("Host info")
-                .timestamp(Utc::now())
-                .color((47, 137, 197))
-                .field("Hostname", match system_info.host_name() {
-                    Some(host) => host,
-                    _ => "Unknown".into()
-                }, true)
-                .field("Platform", match system_info.long_os_version() {
-                    Some(platform) => platform,
-                    _ => "unknwon".into()
-                }, true)
-                .field("Architecture", env::consts::ARCH, true)
+    msg.channel_id
+        .send_message(&ctx.http, |m| {
+            m.embed(|e| {
+                e.title("Host info")
+                    .timestamp(Utc::now())
+                    .color((47, 137, 197))
+                    .field(
+                        "Hostname",
+                        match system_info.host_name() {
+                            Some(host) => host,
+                            _ => "Unknown".into(),
+                        },
+                        true,
+                    )
+                    .field(
+                        "Platform",
+                        match system_info.long_os_version() {
+                            Some(platform) => platform,
+                            _ => "unknwon".into(),
+                        },
+                        true,
+                    )
+                    .field("Architecture", env::consts::ARCH, true)
                 /*
                 .field("Host uptime", match psutil::host::uptime() {
                     Ok(dur) => match chrono::Duration::from_std(dur) {
@@ -63,8 +77,9 @@ async fn hostinfo(ctx: &Context, msg: &Message) -> CommandResult {
                     _ => "Unknown".into()
                 }, true)
                 */
+            })
         })
-    }).await?;
+        .await?;
     Ok(())
 }
 

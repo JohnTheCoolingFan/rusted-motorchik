@@ -1,13 +1,15 @@
 use serenity::client::Context;
-use serenity::model::channel::Message;
 use serenity::framework::standard::macros::{command, group};
 use serenity::framework::standard::CommandResult;
+use serenity::model::channel::Message;
 
 /// You spin my head right round...
 #[command]
 #[max_args(0)]
 async fn spin(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(&ctx.http, "https://www.youtube.com/watch?v=PGNiXGX2nLU").await?;
+    msg.channel_id
+        .say(&ctx.http, "https://www.youtube.com/watch?v=PGNiXGX2nLU")
+        .await?;
     Ok(())
 }
 
@@ -15,21 +17,38 @@ async fn spin(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[aliases(XcQ)]
 async fn rickroll(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(&ctx.http, "<https://www.youtube.com/watch?v=dQw4w9WgXcQ>\n<:kappa_jtcf:546748910765604875>").await?;
+    msg.channel_id
+        .say(
+            &ctx.http,
+            "<https://www.youtube.com/watch?v=dQw4w9WgXcQ>\n<:kappa_jtcf:546748910765604875>",
+        )
+        .await?;
     Ok(())
 }
 
 #[command]
 #[aliases(UDOD_COMMUNIST, UDOD, udod, УДОД_КОММУНИСТ, удод_коммунист, УДОД, удод)]
 async fn udod_communist(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(&ctx.http, "https://youtu.be/OhqSg660cP8").await?;
+    msg.channel_id
+        .say(&ctx.http, "https://youtu.be/OhqSg660cP8")
+        .await?;
     Ok(())
 }
 
 #[command]
-#[aliases(UDOD_COMMUNIST_2, UDOD2, udod2, УДОД_КОММУНИСТ_2, удод_коммунист_2, УДОД2, удод2)]
+#[aliases(
+    UDOD_COMMUNIST_2,
+    UDOD2,
+    udod2,
+    УДОД_КОММУНИСТ_2,
+    удод_коммунист_2,
+    УДОД2,
+    удод2
+)]
 async fn udod_communist_2(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.channel_id.say(&ctx.http, "https://youtu.be/BgF5HcnNN-Q").await?;
+    msg.channel_id
+        .say(&ctx.http, "https://youtu.be/BgF5HcnNN-Q")
+        .await?;
     Ok(())
 }
 
@@ -41,10 +60,13 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
     let time_diff_ms: f64 = {
         match time_diff.num_microseconds() {
             Some(us) => (us as f64) / 1000.0,
-            _ => time_diff.num_milliseconds() as f64
+            _ => time_diff.num_milliseconds() as f64,
         }
     };
-    pong.edit(&ctx.http, |m| m.content(format!("pong!\nTime delta is {} ms", time_diff_ms))).await?;
+    pong.edit(&ctx.http, |m| {
+        m.content(format!("pong!\nTime delta is {time_diff_ms} ms"))
+    })
+    .await?;
     Ok(())
 }
 
