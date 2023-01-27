@@ -1,15 +1,15 @@
-mod test_commands;
+mod factorio;
 mod fun_commands;
 mod miscellaneous;
-mod factorio;
 mod moderation;
-mod service_tools;
 mod server_configuration;
+mod service_tools;
+mod test_commands;
 
-pub use test_commands::*;
+pub use factorio::*;
 pub use fun_commands::*;
 pub use miscellaneous::*;
-pub use factorio::*;
 pub use moderation::*;
-pub use service_tools::*;
 pub use server_configuration::*;
+pub use service_tools::*;
+pub use test_commands::*;
