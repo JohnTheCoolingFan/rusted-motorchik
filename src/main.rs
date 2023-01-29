@@ -32,9 +32,9 @@ const ROLE_QUEUE_INTERVAL: Duration = Duration::from_secs(30); // 30 seconds
 const MOD_LIST_UPDATE_INTERVAL: Duration = Duration::from_secs(60 * 60); // 1 hour
 const ERROR_EMBED_COLOR: (u8, u8, u8) = (255, 15, 15);
 
-#[cfg(not(feature = "debug"))]
+#[cfg(not(debug_assertions))]
 const COMMAND_PREFIX: &str = "$!";
-#[cfg(feature = "debug")]
+#[cfg(debug_assertions)]
 const COMMAND_PREFIX: &str = "$$";
 
 pub struct RoleQueue;
