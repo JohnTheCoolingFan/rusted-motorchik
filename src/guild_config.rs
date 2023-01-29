@@ -119,7 +119,6 @@ impl GuildConfigManager {
                     GuildConfigGetArgs::IdAndContext(id, ctx) => {
                         let guild_cached = id
                             .to_guild_cached(ctx)
-                            .await
                             .ok_or(GuildConfigError::GuildCacheFailed(id))?;
                         gc_cache.insert(
                             guild_id,

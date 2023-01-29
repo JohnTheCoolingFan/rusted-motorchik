@@ -9,7 +9,7 @@ use serenity::utils::content_safe;
 #[command]
 async fn test(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let settings = content_safe_settings(msg);
-    let content = content_safe(&ctx.cache, &args.rest(), &settings).await;
+    let content = content_safe(&ctx.cache, args.rest(), &settings, &[]);
     msg.channel_id.say(&ctx.http, &content).await?;
     Ok(())
 }
@@ -37,8 +37,8 @@ async fn advanced_test(ctx: &Context, msg: &Message, mut args: Args) -> CommandR
             joined
         },
         &settings,
-    )
-    .await;
+        &[],
+    );
     msg.channel_id
         .say(&ctx.http, format!("Passed {arg_cnt} arguments: {content}"))
         .await?;

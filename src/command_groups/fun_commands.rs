@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use serenity::client::Context;
 use serenity::framework::standard::macros::{command, group};
 use serenity::framework::standard::CommandResult;
@@ -56,7 +58,7 @@ async fn udod_communist_2(ctx: &Context, msg: &Message) -> CommandResult {
 /// "Wanna play a little game of pong?")]
 async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
     let mut pong = msg.channel_id.say(&ctx.http, "pong!").await?;
-    let time_diff = pong.timestamp - msg.timestamp;
+    let time_diff = *pong.timestamp.deref() - *msg.timestamp.deref();
     let time_diff_ms: f64 = {
         match time_diff.num_microseconds() {
             Some(us) => (us as f64) / 1000.0,

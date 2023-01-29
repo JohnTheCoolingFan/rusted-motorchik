@@ -2,12 +2,16 @@ use reqwest::{self, StatusCode};
 use scraper::{Html, Selector};
 use semver::Version;
 use serde::Deserialize;
-use serenity::builder::{CreateEmbed, Timestamp};
-use serenity::framework::standard::macros::{command, group};
-use serenity::framework::standard::{Args, CommandError, CommandResult};
-use serenity::model::prelude::*;
-use serenity::prelude::*;
-use serenity::utils::ArgumentConvert;
+use serenity::{
+    builder::CreateEmbed,
+    framework::standard::{
+        macros::{command, group},
+        {Args, CommandError, CommandResult},
+    },
+    model::{prelude::*, timestamp::Timestamp},
+    prelude::*,
+    utils::ArgumentConvert,
+};
 use std::error::Error;
 use std::sync::Arc;
 use thiserror::Error;

@@ -7,7 +7,6 @@ use regex::Regex;
 
 use guild_config::{GuildConfigManager, InfoChannelType};
 use serenity::async_trait;
-use serenity::client::bridge::gateway::GatewayIntents;
 use serenity::client::{Client, Context, EventHandler};
 use serenity::framework::standard::{
     help_commands,
@@ -105,7 +104,7 @@ impl Handler {
         ban_reason: Option<String>,
     ) {
         let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
-        let guild_cached = guild_id.to_guild_cached(&ctx).await.unwrap();
+        let guild_cached = guild_id.to_guild_cached(ctx).unwrap();
         if let Ok(guild_config) = gc_manager.get_cached_guild_config(&guild_cached).await {
             let log_ic_data_arc = guild_config
                 .read()
@@ -152,7 +151,7 @@ impl EventHandler for Handler {
 
     // Redirect DMs to author
     async fn message(&self, ctx: Context, msg: Message) {
-        if !msg.is_own(&ctx).await {
+        if !msg.is_own(&ctx) {
             // DM/PM redirect
             if msg.is_private() {
                 if let Ok(appinfo) = ctx.http.get_current_application_info().await {
@@ -294,7 +293,7 @@ impl EventHandler for Handler {
                 loop {
                     let gc_manager =
                         Arc::clone(ctx2.data.read().await.get::<GuildConfigManager>().unwrap());
-                    let guilds = ctx2.cache.guilds().await;
+                    let guilds = ctx2.cache.guilds();
                     for guild in guilds {
                         if let Ok(guild_config) = gc_manager.get_guild_config(guild, &ctx2).await {
                             if let Err(why) = update_mod_list(&ctx2, guild, guild_config).await {
@@ -310,7 +309,8 @@ impl EventHandler for Handler {
     }
 
     // Member joined a guild
-    async fn guild_member_addition(&self, ctx: Context, guild_id: GuildId, mut new_member: Member) {
+    async fn guild_member_addition(&self, ctx: Context, mut new_member: Member) {
+        let guild_id = new_member.guild_id;
         if let Ok(guild_config) =
             GuildConfigManager::get_guild_config_from_ctx(&ctx, guild_id).await
         {
@@ -449,7 +449,7 @@ async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result:
 async fn main() {
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
-    let http = Http::new_with_token(&token);
+    let http = Http::new(&token);
 
     let (owners, bot_id) = match http.get_current_application_info().await {
         Ok(info) => {
@@ -484,7 +484,7 @@ async fn main() {
         .group(&SERVICETOOLS_GROUP)
         .group(&SERVERCONFIGURATION_GROUP);
 
-    let mut client = Client::builder(&token)
+    let mut client = Client::builder(&token, GatewayIntents::all())
         .event_handler(Handler {
             is_loop_running: AtomicBool::new(false),
         })
