@@ -1,8 +1,12 @@
 use crate::guild_config::{CommandDisability, GuildConfigManager, InfoChannelType};
-use serenity::framework::standard::macros::{command, group};
-use serenity::framework::standard::{ArgError, Args, CommandResult};
-use serenity::model::prelude::*;
-use serenity::prelude::*;
+use serenity::{
+    framework::standard::{
+        macros::{command, group},
+        ArgError, Args, CommandResult,
+    },
+    model::prelude::*,
+    prelude::*,
+};
 use std::str::FromStr;
 use thiserror::Error;
 

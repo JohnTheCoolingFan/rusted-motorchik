@@ -1,15 +1,15 @@
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use serenity::builder::CreateEmbed;
-use serenity::model::prelude::*;
-use serenity::prelude::*;
-use std::collections::HashMap;
-use std::error::Error;
-use std::fs::File;
-use std::hash::Hash;
-use std::iter;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use serenity::{builder::CreateEmbed, model::prelude::*, prelude::*};
+use std::{
+    collections::HashMap,
+    error::Error,
+    fs::File,
+    hash::Hash,
+    iter,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, EnumIter, EnumString};
 use thiserror::Error;

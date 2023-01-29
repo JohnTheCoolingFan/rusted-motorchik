@@ -2,29 +2,31 @@ mod command_groups;
 mod guild_config;
 
 use command_groups::*;
+use guild_config::{GuildConfigManager, InfoChannelType};
 use once_cell::sync::OnceCell;
 use regex::Regex;
-
-use guild_config::{GuildConfigManager, InfoChannelType};
-use serenity::async_trait;
-use serenity::client::{Client, Context, EventHandler};
-use serenity::framework::standard::{
-    help_commands,
-    macros::{help, hook},
+use serenity::{
+    async_trait,
+    client::{Client, Context, EventHandler},
+    framework::standard::{
+        help_commands,
+        macros::{help, hook},
+        Args, CommandGroup, CommandResult, HelpOptions, StandardFramework,
+    },
+    http::Http,
+    model::{channel::Message, gateway::Ready, prelude::*},
+    prelude::*,
+    utils::{ArgumentConvert, ContentSafeOptions},
 };
-use serenity::framework::standard::{
-    Args, CommandGroup, CommandResult, HelpOptions, StandardFramework,
+use std::{
+    collections::HashSet,
+    env,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    time::Duration,
 };
-use serenity::http::Http;
-use serenity::model::prelude::*;
-use serenity::model::{channel::Message, gateway::Ready};
-use serenity::prelude::*;
-use serenity::utils::{ArgumentConvert, ContentSafeOptions};
-use std::collections::HashSet;
-use std::env;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-use std::time::Duration;
 
 const ROLE_QUEUE_INTERVAL: Duration = Duration::from_secs(30); // 30 seconds
 const MOD_LIST_UPDATE_INTERVAL: Duration = Duration::from_secs(60 * 60); // 1 hour

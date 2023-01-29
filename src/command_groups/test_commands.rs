@@ -1,9 +1,13 @@
 use crate::content_safe_settings;
-use serenity::client::Context;
-use serenity::framework::standard::macros::{command, group};
-use serenity::framework::standard::{Args, CommandResult};
-use serenity::model::channel::Message;
-use serenity::utils::content_safe;
+use serenity::{
+    client::Context,
+    framework::standard::{
+        macros::{command, group},
+        Args, CommandResult,
+    },
+    model::channel::Message,
+    utils::content_safe,
+};
 
 /// Simply return the text that was passed to this command
 #[command]

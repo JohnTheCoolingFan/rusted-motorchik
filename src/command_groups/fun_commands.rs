@@ -1,9 +1,13 @@
 use std::ops::Deref;
 
-use serenity::client::Context;
-use serenity::framework::standard::macros::{command, group};
-use serenity::framework::standard::CommandResult;
-use serenity::model::channel::Message;
+use serenity::{
+    client::Context,
+    framework::standard::{
+        macros::{command, group},
+        CommandResult,
+    },
+    model::channel::Message,
+};
 
 /// You spin my head right round...
 #[command]

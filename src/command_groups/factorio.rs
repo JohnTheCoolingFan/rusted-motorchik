@@ -12,8 +12,7 @@ use serenity::{
     prelude::*,
     utils::ArgumentConvert,
 };
-use std::error::Error;
-use std::sync::Arc;
+use std::{error::Error, sync::Arc};
 use thiserror::Error;
 
 use crate::guild_config::{GuildConfig, GuildConfigManager, InfoChannelType};

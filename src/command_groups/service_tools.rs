@@ -1,8 +1,14 @@
-use serenity::client::Context;
-use serenity::framework::standard::macros::{command, group};
-use serenity::framework::standard::{Args, CommandResult};
-use serenity::model::channel::Message;
-use serenity::model::id::{ChannelId, UserId};
+use serenity::{
+    client::Context,
+    framework::standard::{
+        macros::{command, group},
+        Args, CommandResult,
+    },
+    model::{
+        channel::Message,
+        id::{ChannelId, UserId},
+    },
+};
 
 #[command]
 async fn say(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {

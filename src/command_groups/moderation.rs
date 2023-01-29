@@ -1,8 +1,12 @@
 use crate::{BanMessageIgnoreList, Handler};
-use serenity::framework::standard::macros::{command, group};
-use serenity::framework::standard::{Args, CommandResult};
-use serenity::model::prelude::*;
-use serenity::prelude::*;
+use serenity::{
+    framework::standard::{
+        macros::{command, group},
+        Args, CommandResult,
+    },
+    model::prelude::*,
+    prelude::*,
+};
 use std::sync::Arc;
 use std::time::Duration;
 
