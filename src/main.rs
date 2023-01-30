@@ -485,13 +485,13 @@ async fn main() {
         .before(before)
         .after(after)
         .help(&MY_HELP)
-        .group(&TESTCOMMANDS_GROUP)
+        .group(&FACTORIO_GROUP)
         .group(&FUNCOMMANDS_GROUP)
         .group(&MISCELLANEOUS_GROUP)
-        .group(&FACTORIO_GROUP)
         .group(&MODERATION_GROUP)
+        .group(&SERVERCONFIGURATION_GROUP)
         .group(&SERVICETOOLS_GROUP)
-        .group(&SERVERCONFIGURATION_GROUP);
+        .group(&TESTCOMMANDS_GROUP);
 
     let mut client = Client::builder(&token, GatewayIntents::all())
         .event_handler(Handler {
