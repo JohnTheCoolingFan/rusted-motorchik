@@ -67,7 +67,7 @@ async fn info(ctx: &Context, msg: &Message) -> CommandResult {
                         true,
                     )
                     .field("Architecture", env::consts::ARCH, true)
-                /*
+                /* TODO
                 .field("Host uptime", match psutil::host::uptime() {
                     Ok(dur) => match chrono::Duration::from_std(dur) {
                         // TODO: Improve formatting (don't display days when 0, etc)
