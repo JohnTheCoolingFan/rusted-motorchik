@@ -42,7 +42,7 @@ async fn source(ctx: &Context, msg: &Message) -> CommandResult {
 // TODO: Motorchik version, compiler version, etc
 /// Info about host on which this bot is currently running
 #[command]
-async fn hostinfo(ctx: &Context, msg: &Message) -> CommandResult {
+async fn info(ctx: &Context, msg: &Message) -> CommandResult {
     let system_info = sysinfo::System::default();
     msg.channel_id
         .send_message(&ctx.http, |m| {
@@ -90,5 +90,5 @@ async fn hostinfo(ctx: &Context, msg: &Message) -> CommandResult {
 // I'm not bringing "f***discord" command because it's about python and not quite relevant anymore...
 /// Nothing of much interest
 #[group]
-#[commands(github, gitlab, source, hostinfo)]
+#[commands(github, gitlab, source, info)]
 struct Miscellaneous;
