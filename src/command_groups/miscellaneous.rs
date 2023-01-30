@@ -83,6 +83,7 @@ async fn info(ctx: &Context, msg: &Message) -> CommandResult {
                         ),
                         true,
                     )
+                    .field("Build git commit hash", env!("GIT_HASH"), true)
                 /* TODO
                 .field("Host uptime", match psutil::host::uptime() {
                     Ok(dur) => match chrono::Duration::from_std(dur) {
