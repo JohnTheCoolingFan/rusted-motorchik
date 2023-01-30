@@ -11,7 +11,7 @@ use std::env;
 use sysinfo::SystemExt;
 
 const GITHUB_URL: &str = "https://github.com/JohnTheCoolingFan/rusted-motorchik";
-const GITLAB_URL: &str = "Sorry, not available yet";
+const GITLAB_URL: &str = "https://gitlab.com/JohnTheCoolingFan/rusted-motorchik";
 
 /// Send GitHub source link
 #[command]
