@@ -10,6 +10,8 @@ use serenity::{
 use std::env;
 use sysinfo::SystemExt;
 
+use crate::StartTime;
+
 const GITHUB_URL: &str = "https://github.com/JohnTheCoolingFan/rusted-motorchik";
 const GITLAB_URL: &str = "https://gitlab.com/JohnTheCoolingFan/rusted-motorchik";
 
@@ -44,6 +46,9 @@ async fn source(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 async fn info(ctx: &Context, msg: &Message) -> CommandResult {
     let system_info = sysinfo::System::default();
+    let data_lock = ctx.data.read().await;
+    let start_time = data_lock.get::<StartTime>().unwrap();
+    let dur = Utc::now() - *start_time.as_ref();
     msg.channel_id
         .send_message(&ctx.http, |m| {
             m.embed(|e| {
@@ -67,6 +72,17 @@ async fn info(ctx: &Context, msg: &Message) -> CommandResult {
                         true,
                     )
                     .field("Architecture", env::consts::ARCH, true)
+                    .field(
+                        "Bot uptime",
+                        format!(
+                            "{} days, {:02}:{:02}:{:02}",
+                            dur.num_days(),
+                            dur.num_hours() % 24,
+                            dur.num_minutes() % 60,
+                            dur.num_seconds() % 60
+                        ),
+                        true,
+                    )
                 /* TODO
                 .field("Host uptime", match psutil::host::uptime() {
                     Ok(dur) => match chrono::Duration::from_std(dur) {

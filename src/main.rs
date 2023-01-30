@@ -1,6 +1,7 @@
 mod command_groups;
 mod guild_config;
 
+use chrono::{DateTime, Utc};
 use command_groups::*;
 use guild_config::{GuildConfigManager, InfoChannelType};
 use once_cell::sync::OnceCell;
@@ -36,6 +37,12 @@ const ERROR_EMBED_COLOR: (u8, u8, u8) = (255, 15, 15);
 const COMMAND_PREFIX: &str = "$!";
 #[cfg(debug_assertions)]
 const COMMAND_PREFIX: &str = "$$";
+
+pub struct StartTime;
+
+impl TypeMapKey for StartTime {
+    type Value = Arc<DateTime<Utc>>;
+}
 
 pub struct RoleQueue;
 
@@ -502,6 +509,7 @@ async fn main() {
         client_data.insert::<RoleQueue>(Arc::new(RwLock::new(Vec::new())));
         client_data.insert::<GuildConfigManager>(Arc::new(GuildConfigManager::new(&config_path)));
         client_data.insert::<FactorioReqwestClient>(reqwest::Client::new());
+        client_data.insert::<StartTime>(Arc::new(Utc::now()));
     }
 
     if let Err(why) = client.start().await {
