@@ -14,6 +14,9 @@ use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, EnumIter, EnumString};
 use thiserror::Error;
 
+// TODO: factor out work with DB (even jsonn files) into modules and leave thsi aas a lib of
+// structs
+
 #[cfg(test)]
 use std::str::FromStr;
 
