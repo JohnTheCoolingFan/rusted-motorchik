@@ -50,7 +50,7 @@ jobs:
   build-arm:
     runs-on: ubuntu-latest
 
-    stesp:
+    steps:
     - uses: action/checkout@v3
 
     - name: Install toolchain
