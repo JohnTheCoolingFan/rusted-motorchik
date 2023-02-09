@@ -69,9 +69,8 @@ jobs:
 
     - name: Generate hashes
       run: |
-        cp target/armv7-unknown-linux-gnueabihf/release/rusted-motorchik ./rusted-motorhcik-linux-arm
-        sha256sum rusted-motorhcik-linux-arm > rusted-motorhcik-linux-arm.sha256
-        ls -R
+        cp target/armv7-unknown-linux-gnueabihf/release/rusted-motorchik ./rusted-motorchik-linux-arm
+        sha256sum rusted-motorchik-linux-arm > rusted-motorchik-linux-arm.sha256
 
     - name: Upload release
       uses: softprops/action-gh-release@v1
