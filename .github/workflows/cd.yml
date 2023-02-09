@@ -22,24 +22,59 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+
     - name: Install toolchain
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
         default: true
+
     - name: Build
       uses: actions-rs/cargo@v1.0.1
       with:
         command: build
         args: --release
+
     - name: Generate hashes
-      shell: bash
       run: |
-        cp target/release/rfmp${{ matrix.extension }} target/release/rfmp-${{ matrix.os_suffix }}
-        sha256sum target/release/rfmp${{ matrix.extension }} > rfmp-${{ matrix.os_suffix }}.sha256
+        cp target/release/rusted-motorhcik${{ matrix.extension }} target/release/rusted-motorchik-${{ matrix.os_suffix }}
+        sha256sum target/release/rusted-motorchik${{ matrix.extension }} > rusted-motorhcik-${{ matrix.os_suffix }}.sha256
+
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          target/release/rfmp-${{ matrix.os_suffix }}
-          rfmp-${{ matrix.os_suffix }}.sha256
+          target/release/rusted-motorchik-${{ matrix.os_suffix }}
+          rusted-motorchik-${{ matrix.os_suffix }}.sha256
+
+  build-arm:
+    runs-on: ubuntu-latest
+
+    stesp:
+    - uses: action/checkout@v3
+
+    - name: Install toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: armv7-unknown-linux-gnueabihf
+        override: true
+
+    - name: Build
+      uses: actions-rs/cargo@v1.0.1
+      with:
+        command: build
+        args: --release --target armv7-unknown-linux-gnueabihf
+        use-cross: true
+
+    - name: Generate hashes
+      run: |
+        cp target/armv7-unknown-linux-gnueabihf/release/rusted-motorchik rusted-motorhcik-linux-arm
+        sha256sum rusted-motorhcik-linux-arm > rusted-motorhcik-linux-arm.sha256
+
+    - name: Upload release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          rusted-motorchik-linux-arm
+          rusted-motorchik-linux-arm.sha256
