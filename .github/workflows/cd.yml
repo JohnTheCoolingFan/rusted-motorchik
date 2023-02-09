@@ -1,0 +1,45 @@
+name: deploy
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            os_suffix: linux
+            extension: ""
+          - os: windows-latest
+            os_suffix: win.exe
+            extension: .exe
+        
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        default: true
+    - name: Build
+      uses: actions-rs/cargo@v1.0.1
+      with:
+        command: build
+        args: --release
+    - name: Generate hashes
+      shell: bash
+      run: |
+        cp target/release/rfmp${{ matrix.extension }} target/release/rfmp-${{ matrix.os_suffix }}
+        sha256sum target/release/rfmp${{ matrix.extension }} > rfmp-${{ matrix.os_suffix }}.sha256
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          target/release/rfmp-${{ matrix.os_suffix }}
+          rfmp-${{ matrix.os_suffix }}.sha256
