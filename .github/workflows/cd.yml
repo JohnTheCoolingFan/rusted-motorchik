@@ -38,7 +38,7 @@ jobs:
     - name: Generate hashes
       run: |
         cp target/release/rusted-motorchik${{ matrix.extension }} target/release/rusted-motorchik-${{ matrix.os_suffix }}
-        sha256sum target/release/rusted-motorchik${{ matrix.extension }} > rusted-motorhcik-${{ matrix.os_suffix }}.sha256
+        sha256sum target/release/rusted-motorchik${{ matrix.extension }} > rusted-motorchik-${{ matrix.os_suffix }}.sha256
 
     - name: Release
       uses: softprops/action-gh-release@v1
