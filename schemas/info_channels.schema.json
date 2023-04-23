@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.github.com/JohnTheCoolingFan/rusted-motorchik/schemas/info_channels.schema.json",
+  "title": "Info Channels config",
+  "description": "Configuration for various info channels",
+  "type": "object",
+  "properties": {
+    "mod-list": {
+      "description": "Properties of Mod List info channel config",
+      "type": "object",
+      "properties": {
+        "channel_id": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "log": {
+      "description": "Properties of Log info channel config",
+      "type": "object",
+      "properties": {
+        "channel_id": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "welcome": {
+      "description": "Properties of Welcoming info channel config",
+      "type": "object",
+      "properties": {
+        "channel_id": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

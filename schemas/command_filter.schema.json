@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.github.com/JohnTheCoolingFan/rusted-motorchik/schemas/guild_config.schema.json",
+  "title": "Command Filter",
+  "description": "Filter that blocks or allows usage of commands in specific channels",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3
+    },
+    "channels": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0
+      }
+    }
+  }
+}

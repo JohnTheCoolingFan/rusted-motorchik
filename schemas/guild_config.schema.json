@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.github.com/JohnTheCoolingFan/rusted-motorchik/schemas/guild_config.schema.json",
+  "title": "Guild Config",
+  "description": "Configuration for a specific Discord guild, used by Motorchik bot",
+  "type": "object",
+  "properties": {
+    "mod_list_messages": {
+      "description": "IDs of messages with already posted mod info that will be updated on regular basis",
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "uniqueItems": true
+    },
+    "message_link_lookup": {
+      "description": "Enables automatic lookup of messages links to which are contained in new messages",
+      "type": "boolean"
+    },
+    "default_roles": {
+      "description": "Roles that are assigned to a new member on join",
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "uniqueItems": true
+    },
+    "info_channels": {
+      "description": "Settings of Info Channels",
+      "$ref": "https://raw.github.com/JohnTheCoolingFan/rusted-motorchik/shcemas/info_channels.schema.json"
+    },
+    "command_filters": {
+      "description": "Filters that block or allow usage of commands in certain channels",
+      "type": "object",
+      "patternProperties": {
+        "^[a-z]*$": {
+          "description": "Command Filter",
+          "$ref": "https://raw.github.com/JohnTheCoolingFan/rusted-motorchik/schemas/command_filter.schema.json"
+        }
+      }
+    }
+  }
+}
