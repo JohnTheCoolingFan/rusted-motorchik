@@ -44,5 +44,6 @@
         }
       }
     }
-  }
+  },
+  "required": ["mod-list", "log", "welcome"]
 }

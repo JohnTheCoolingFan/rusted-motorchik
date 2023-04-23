@@ -17,5 +17,6 @@
         "minimum": 0
       }
     }
-  }
+  },
+  "required": ["type", "channels"]
 }

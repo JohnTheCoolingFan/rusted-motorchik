@@ -41,5 +41,6 @@
         }
       }
     }
-  }
+  },
+  "required": ["mod_list_messages", "message_link_lookup", "default_roles", "info_channels", "command_filters"]
 }
