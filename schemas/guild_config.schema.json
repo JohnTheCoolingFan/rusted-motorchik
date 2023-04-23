@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.github.com/JohnTheCoolingFan/rusted-motorchik/schemas/guild_config.schema.json",
+  "$id": "https://raw.githubusercontent.com/JohnTheCoolingFan/rusted-motorchik/master/schemas/guild_config.schema.json",
   "title": "Guild Config",
   "description": "Configuration for a specific Discord guild, used by Motorchik bot",
   "type": "object",
@@ -29,7 +29,7 @@
     },
     "info_channels": {
       "description": "Settings of Info Channels",
-      "$ref": "https://raw.github.com/JohnTheCoolingFan/rusted-motorchik/shcemas/info_channels.schema.json"
+      "$ref": "https://raw.githubusercontent.com/JohnTheCoolingFan/rusted-motorchik/master/schemas/info_channels.schema.json"
     },
     "command_filters": {
       "description": "Filters that block or allow usage of commands in certain channels",
@@ -37,7 +37,7 @@
       "patternProperties": {
         "^[a-z]*$": {
           "description": "Command Filter",
-          "$ref": "https://raw.github.com/JohnTheCoolingFan/rusted-motorchik/schemas/command_filter.schema.json"
+          "$ref": "https://raw.githubusercontent.com/JohnTheCoolingFan/rusted-motorchik/master/schemas/command_filter.schema.json"
         }
       }
     }
