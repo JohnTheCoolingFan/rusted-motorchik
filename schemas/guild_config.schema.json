@@ -9,8 +9,12 @@
       "description": "IDs of messages with already posted mod info that will be updated on regular basis",
       "type": "array",
       "items": {
-        "type": "integer",
-        "minimum": 0
+        "type": "array",
+        "items": {
+          "type": ["string", "integer"],
+          "maxItems": 2,
+          "minItems": 2
+        }
       },
       "uniqueItems": true
     },
