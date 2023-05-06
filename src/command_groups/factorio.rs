@@ -144,6 +144,7 @@ async fn modlist(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
     let guild_config_read = guild_config.read().await;
     let channel = {
         let modlist_ic_data = guild_config_read.info_channels_data(InfoChannelType::ModList);
+        #[allow(clippy::let_and_return)]
         let channel = modlist_ic_data.read().await.channel_id;
         channel
     };
