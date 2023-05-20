@@ -1,4 +1,4 @@
-[![discord server](https://img.shields.io/discord/370167294439063564)](https://discord.gg/rqkaeYJhzS)
+[![discord server](https://img.shields.io/discord/370167294439063564?style=flat)](https://discord.gg/rqkaeYJhzS)
 
 # Rusted Motorchik
 
