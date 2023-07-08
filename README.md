@@ -1,4 +1,8 @@
-This is a rewrite of [Motorchik bot](https://github.com/JohnTheCoolingFan/Motorchik) to rust using [serenity](https://github.com/serenity-rs/serenity) library
+[![discord server](https://img.shields.io/discord/370167294439063564?style=flat)](https://discord.gg/rqkaeYJhzS)
+
+# Rusted Motorchik
+
+This is a rewrite of my [Motorchik bot](https://github.com/JohnTheCoolingFan/Motorchik) in rust using [serenity](https://github.com/serenity-rs/serenity) library
 
 Invite link: https://discord.com/api/oauth2/authorize?client_id=551085000775172096&permissions=1426399423606&scope=bot
 
