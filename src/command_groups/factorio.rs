@@ -27,7 +27,8 @@ pub const MOD_LIST: [&str; 6] = [
 ];
 
 const MODPORTAL_URL: &str = "https://mods.factorio.com";
-const LAUNCHER_URL: &str = "https://factorio-launcher-mods.storage.googleapis.com/";
+// dead
+//const LAUNCHER_URL: &str = "https://factorio-launcher-mods.storage.googleapis.com/";
 
 const FAILED_EMBED_COLOR: (u8, u8, u8) = (255, 10, 10);
 const SUCCESS_EMBED_COLOR: (u8, u8, u8) = (47, 137, 197);
@@ -93,7 +94,7 @@ impl ModData {
 
 struct ModDownload {
     official: String,
-    launcher: String,
+    launcher: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -275,14 +276,15 @@ fn construct_mod_embed(e: &mut CreateEmbed, data: ModData) -> &mut CreateEmbed {
         e.field("Game version", game_version, true);
     }
     if let Some(download) = data.download {
-        e.field(
-            "Download",
+        let download_links = if let Some(launcher_download_url) = &download.launcher {
             format!(
                 "[From official mod portal]({})\n[From Factorio Launcher storage]({})",
-                download.official, download.launcher
-            ),
-            true,
-        );
+                download.official, launcher_download_url
+            )
+        } else {
+            format!("[From official mod portal]({})", download.official)
+        };
+        e.field("Download", download_links, true);
     }
     if let Some(latest_version) = data.latest_version {
         e.field("Latest version", latest_version, true);
@@ -354,7 +356,8 @@ async fn parse_mod_data(
         result.game_version = Some(lrls.info_json.factorio_version.clone());
         result.download = Some(ModDownload {
             official: format!("{}{}", MODPORTAL_URL, lrls.download_url),
-            launcher: format!("{}/{}/{}.zip", LAUNCHER_URL, mod_name, lrls.version),
+            //launcher: format!("{}/{}/{}.zip", LAUNCHER_URL, mod_name, lrls.version),
+            launcher: None,
         });
         result.latest_version = Some(lrls.version.to_string());
     }
