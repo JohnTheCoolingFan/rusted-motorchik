@@ -284,13 +284,13 @@ fn construct_mod_embed(e: &mut CreateEmbed, data: ModData) -> &mut CreateEmbed {
         } else {
             format!("[From official mod portal]({})", download.official)
         };
-        e.field("Recent downloads", download_links, true);
+        e.field("Download link", download_links, true);
     }
     if let Some(latest_version) = data.latest_version {
         e.field("Latest version", latest_version, true);
     }
     e.field(
-        "Downloaded",
+        "Recent downloads",
         format!("{} times", data.downloads_count),
         true,
     );
