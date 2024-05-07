@@ -1,6 +1,16 @@
 mod command_groups;
 mod guild_config;
 
+use std::{
+    collections::HashSet,
+    env,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    time::Duration,
+};
+
 use chrono::{DateTime, Utc};
 use command_groups::*;
 use guild_config::{GuildConfigManager, InfoChannelType};
@@ -18,15 +28,6 @@ use serenity::{
     model::{channel::Message, gateway::Ready, prelude::*},
     prelude::*,
     utils::{ArgumentConvert, ContentSafeOptions},
-};
-use std::{
-    collections::HashSet,
-    env,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-    time::Duration,
 };
 
 const ROLE_QUEUE_INTERVAL: Duration = Duration::from_secs(30); // 30 seconds
@@ -99,7 +100,7 @@ impl Handler {
                     )
                     .await
                 {
-                    println!("Error sending kick log message: {why}");
+                    log::error!("Error sending kick log message: {why}");
                 }
             }
         }
@@ -132,7 +133,7 @@ impl Handler {
                             });
                             let ban_issued_by = banned_by
                                 .map(|bby| format!(" by {bby}"))
-                                .unwrap_or_else(String::new);
+                                .unwrap_or_default();
                             if let Err(why) = channel
                                 .say(
                                     ctx,
@@ -140,7 +141,7 @@ impl Handler {
                                 )
                                 .await
                             {
-                                println!("Error sending a ban log message: {why}");
+                                log::error!("Error sending a ban log message: {why}");
                             }
                             break;
                         }
@@ -155,7 +156,7 @@ impl Handler {
 impl EventHandler for Handler {
     // Print account info
     async fn ready(&self, _: Context, ready: Ready) {
-        println!("Connected as {}", ready.user.name);
+        log::info!("Connected as {}", ready.user.name);
     }
 
     // Redirect DMs to author
@@ -175,7 +176,7 @@ impl EventHandler for Handler {
                         })
                         .await
                     {
-                        println!("Failed to redirect message: {why}")
+                        log::error!("Failed to redirect message: {why}")
                     }
                 }
             } else {
@@ -225,7 +226,7 @@ impl EventHandler for Handler {
                                             })
                                             .await
                                         {
-                                            println!("Failed to reply: {why}");
+                                            log::error!("Failed to reply: {why}");
                                         }
                                     }
                                 }
@@ -244,7 +245,7 @@ impl EventHandler for Handler {
                         if let Err(why) =
                             reply_process_mod(&ctx, &msg, &mod_name[2..(mod_name.len() - 2)]).await
                         {
-                            println!("Failed to reply with mod data: {why}");
+                            log::error!("Failed to reply with mod data: {why}");
                         }
                     }
                 }
@@ -253,7 +254,7 @@ impl EventHandler for Handler {
     }
 
     async fn cache_ready(&self, ctx: Context, _guilds: Vec<GuildId>) {
-        println!("Cache built successfully!");
+        log::info!("Cache built successfully!");
 
         let ctx = Arc::new(ctx);
 
@@ -280,9 +281,11 @@ impl EventHandler for Handler {
                                     .add_roles(&ctx1, guild_config.read().await.default_roles())
                                     .await
                                 {
-                                    println!(
+                                    log::error!(
                                         "Failed to give roles to member {} of guild {}: {}",
-                                        member.user.id, member.guild_id, why
+                                        member.user.id,
+                                        member.guild_id,
+                                        why
                                     );
                                 }
                             }
@@ -306,7 +309,7 @@ impl EventHandler for Handler {
                     for guild in guilds {
                         if let Ok(guild_config) = gc_manager.get_guild_config(guild, &ctx2).await {
                             if let Err(why) = update_mod_list(&ctx2, guild, guild_config).await {
-                                println!("Failed to update mod list: {why}");
+                                log::error!("Failed to update mod list: {why}");
                             }
                         }
                     }
@@ -334,9 +337,11 @@ impl EventHandler for Handler {
                         .add_roles(&ctx, guild_config.read().await.default_roles())
                         .await
                     {
-                        println!(
+                        log::error!(
                             "Failed to give roles to member {} of guild {}: {}",
-                            new_member.user.id, guild_id, why
+                            new_member.user.id,
+                            guild_id,
+                            why
                         );
                     }
                 }
@@ -354,7 +359,7 @@ impl EventHandler for Handler {
                         .say(&ctx, format!("Welcome, {}!", new_member.mention()))
                         .await
                     {
-                        println!(
+                        log::error!(
                             "Failed to greet member {new_member} in guild {guild_id} due to a following error: {why}"
                         );
                     }
@@ -382,7 +387,7 @@ impl EventHandler for Handler {
             if welcome_ic_data.enabled {
                 let channel = welcome_ic_data.channel_id;
                 if let Err(why) = channel.say(&ctx, format!("Goodbye, {}", user.name)).await {
-                    println!("Failed to say goodbye to user {user} who left guild {guild_id} due to a following error: {why}");
+                    log::error!("Failed to say goodbye to user {user} who left guild {guild_id} due to a following error: {why}");
                 }
             }
         }
@@ -438,7 +443,7 @@ async fn before(ctx: &Context, msg: &Message, cmd_name: &str) -> bool {
 #[hook]
 async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result: CommandResult) {
     if let Err(why) = command_result {
-        println!("Command '{command_name}' returned error {why}");
+        log::error!("Command '{command_name}' returned error {why}");
         if let Err(why_echo) = msg.channel_id.send_message(&ctx.http, |m| {
             m.add_embed(|e| {
                 e.color(ERROR_EMBED_COLOR)
@@ -449,13 +454,15 @@ async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result:
                     })
             })
         }).await {
-            println!("Error sending command error report: {why_echo}");
+            log::error!("Error sending command error report: {why_echo}");
         }
     }
 }
 
 #[tokio::main]
 async fn main() {
+    simple_logger::init_with_env().unwrap();
+
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
     let http = Http::new(&token);
@@ -513,6 +520,6 @@ async fn main() {
     }
 
     if let Err(why) = client.start().await {
-        println!("Client error: {why:?}");
+        log::error!("Client error: {why:?}");
     }
 }
