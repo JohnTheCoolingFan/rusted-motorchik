@@ -108,7 +108,7 @@ struct ModDownload {
 #[derive(Debug, Clone, Deserialize)]
 struct ModInfo {
     releases: Vec<ModRelease>,
-    thumbnail: String,
+    thumbnail: Option<String>,
     title: String,
     summary: String,
     downloads_count: usize,
@@ -387,9 +387,10 @@ async fn parse_mod_data(
         });
         result.latest_version = Some(latest_release.version.to_string());
     }
-    if mod_info.thumbnail != "/assets/.thumb.png" {
-        result.thumbnail_url =
-            format!("https://mods-data.factorio.com{}", mod_info.thumbnail).into();
+    if let Some(mod_thumbnail) = mod_info.thumbnail {
+        if mod_thumbnail != "/assets/.thumb.png" {
+            result.thumbnail_url = Some(format!("https://mods-data.factorio.com{}", mod_thumbnail));
+        }
     }
     log::debug!("Resulting mod data: {result:?}");
     Ok(result)
