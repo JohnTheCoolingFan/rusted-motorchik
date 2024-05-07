@@ -1,3 +1,5 @@
+use std::{error::Error, fmt::Display, sync::Arc};
+
 use reqwest::{self, StatusCode};
 use scraper::{Html, Selector};
 use semver::Version;
@@ -6,13 +8,12 @@ use serenity::{
     builder::CreateEmbed,
     framework::standard::{
         macros::{command, group},
-        {Args, CommandError, CommandResult},
+        Args, CommandError, CommandResult,
     },
     model::{prelude::*, timestamp::Timestamp},
     prelude::*,
     utils::ArgumentConvert,
 };
-use std::{error::Error, sync::Arc};
 use thiserror::Error;
 
 use crate::guild_config::{GuildConfig, GuildConfigManager, InfoChannelType};
@@ -33,12 +34,14 @@ const MODPORTAL_URL: &str = "https://mods.factorio.com";
 const FAILED_EMBED_COLOR: (u8, u8, u8) = (255, 10, 10);
 const SUCCESS_EMBED_COLOR: (u8, u8, u8) = (47, 137, 197);
 
+#[derive(Debug, Clone, Copy)]
 pub struct FactorioReqwestClient;
 
 impl TypeMapKey for FactorioReqwestClient {
     type Value = reqwest::Client;
 }
 
+#[derive(Debug, Clone)]
 struct ModData {
     title: String,
     description: String,
@@ -54,6 +57,7 @@ struct ModData {
 }
 
 impl ModData {
+    #[inline]
     pub fn new(
         title: String,
         description: String,
@@ -84,20 +88,24 @@ impl ModData {
     ) -> &'a mut CreateEmbed {
         match mod_data {
             Ok(data) => construct_mod_embed(embed, data),
-            Err(_) => embed
-                .title("Mod not found")
-                .description(format!("Failed to find {mod_name}"))
-                .color(FAILED_EMBED_COLOR),
+            Err(e) => {
+                log::error!("Failed to fetch mod data: {e}");
+                embed
+                    .title("Mod not found")
+                    .description(format!("Failed to find {mod_name}"))
+                    .color(FAILED_EMBED_COLOR)
+            }
         }
     }
 }
 
+#[derive(Debug, Clone)]
 struct ModDownload {
     official: String,
     launcher: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 struct ModInfo {
     releases: Vec<ModRelease>,
     thumbnail: String,
@@ -107,7 +115,7 @@ struct ModInfo {
     owner: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 struct ModRelease {
     version: Version,
     info_json: InfoJson,
@@ -115,7 +123,7 @@ struct ModRelease {
     download_url: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 struct InfoJson {
     factorio_version: String,
 }
@@ -172,16 +180,23 @@ async fn modlist(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
     Ok(())
 }
 
-pub async fn scheduled_modlist<T: AsRef<str>>(
+pub async fn scheduled_modlist<I, T>(
     ctx: &Context,
     channel: ChannelId,
-    mod_list: impl AsRef<[T]>,
-) -> std::result::Result<Vec<(String, MessageId)>, CommandError> {
+    mod_list: I,
+) -> std::result::Result<Vec<(String, MessageId)>, CommandError>
+where
+    I: IntoIterator<Item = T>,
+    T: Display,
+{
+    log::info!("Updating mod list (scheduled, not editing)");
     let mut result = Vec::new();
-    for mod_name in mod_list.as_ref() {
+    for mod_name in mod_list {
+        log::debug!("Processing {mod_name}");
+        let mod_name = mod_name.to_string();
         result.push((
-            mod_name.as_ref().into(),
-            process_mod(ctx, channel, mod_name.as_ref()).await?,
+            mod_name.clone(),
+            process_mod(ctx, channel, &mod_name).await?,
         ));
     }
     Ok(result)
@@ -192,6 +207,7 @@ async fn process_mod(
     channel: ChannelId,
     mod_name: &str,
 ) -> std::result::Result<MessageId, CommandError> {
+    log::info!("Processing mod {mod_name}");
     let mod_data = get_mod_info(ctx, mod_name).await;
     Ok(channel
         .send_message(&ctx.http, |m| {
@@ -218,7 +234,9 @@ pub async fn edit_update_mod_list(
     guild: GuildId,
     messages: Arc<RwLock<Vec<(String, MessageId)>>>,
 ) -> CommandResult {
+    log::info!("Updating mod list via editing");
     for (mod_name, message_id) in &*messages.read().await {
+        log::debug!("Processing mod {mod_name} in message {message_id}");
         let message_id = message_id.to_string();
         let mut message = Message::convert(ctx, Some(guild), Some(channel), &message_id).await?;
         let mod_data = get_mod_info(ctx, mod_name).await;
@@ -236,22 +254,26 @@ pub async fn update_mod_list(
     guild: GuildId,
     guild_config: Arc<RwLock<GuildConfig>>,
 ) -> CommandResult {
+    log::debug!("Checking mod list config for {guild}");
     let mod_list_ic_data_arc = guild_config
         .read()
         .await
         .info_channels_data(InfoChannelType::ModList);
     let mod_list_ic_data = mod_list_ic_data_arc.read().await;
     if mod_list_ic_data.enabled {
+        log::info!("Updating mod list of {guild}");
         let channel = mod_list_ic_data.channel_id;
         let mod_list_messages_arc = Arc::clone(&guild_config.read().await.mod_list_messages);
         if mod_list_messages_arc.read().await.is_empty() {
+            log::info!("Empty list of messages");
             let messages = channel
                 .messages(ctx, |gm| gm.limit(MOD_LIST.len() as u64))
                 .await?;
             channel.delete_messages(ctx, messages).await?;
             match scheduled_modlist(ctx, channel, &MOD_LIST).await {
-                Err(why) => println!("Failed to update mod list (send messages step) in guild {guild}, channel {channel} due to a following error: {why}"),
+                Err(why) => log::error!("Failed to update mod list (send messages step) in guild {guild}, channel {channel} due to a following error: {why}"),
                 Ok(message_ids) => {
+                    log::info!("Success updating mod list with no initial messages");
                     {
                         let mut mod_list_messages = mod_list_messages_arc.write().await;
                         mod_list_messages.clear();
@@ -313,23 +335,26 @@ async fn get_mod_info(
     ctx: &Context,
     mod_name: &str,
 ) -> Result<ModData, Box<dyn Error + Send + Sync>> {
+    log::info!("Getting info for {mod_name}");
     let client_data = ctx.data.read().await;
     let reqwest_client = client_data.get::<FactorioReqwestClient>().unwrap();
     let api_response = reqwest_client
         .get(format!("{MODPORTAL_URL}/api/mods/{mod_name}"))
         .send()
         .await?;
-    if api_response.status() == StatusCode::OK {
+    if api_response.status().is_success() {
+        log::info!("Success for mod {mod_name}");
         parse_mod_data(api_response, mod_name).await
     } else {
-        let new_mod_name = find_mod(ctx, mod_name).await;
-        if let Ok(mname) = new_mod_name {
+        if let Ok(new_mod_name) = find_mod(ctx, mod_name).await {
             let api_response =
-                reqwest::get(format!("{}/api/mods/{}", MODPORTAL_URL, &mname)).await?;
-            if api_response.status() == StatusCode::OK {
-                return parse_mod_data(api_response, &mname).await;
+                reqwest::get(format!("{}/api/mods/{}", MODPORTAL_URL, &new_mod_name)).await?;
+            if api_response.status().is_success() {
+                log::debug!("Secondary search success for {mod_name} using {new_mod_name}");
+                return parse_mod_data(api_response, &new_mod_name).await;
             }
         }
+        log::error!("Failed to find mod {mod_name}, secondary search failed");
         Err(ModError::NotFound.into())
     }
 }
@@ -339,6 +364,7 @@ async fn parse_mod_data(
     mod_name: &str,
 ) -> Result<ModData, Box<dyn Error + Send + Sync>> {
     let mut mod_info: ModInfo = api_response.json().await?;
+    log::debug!("Mod info: {mod_info:?}");
     mod_info
         .releases
         .sort_by(|rls1, rls2| rls1.version.cmp(&rls2.version));
@@ -351,20 +377,21 @@ async fn parse_mod_data(
         mod_info.downloads_count,
         mod_info.owner,
     );
-    if let Some(lrls) = latest_release {
-        result.timestamp = Some(lrls.released_at.clone().into());
-        result.game_version = Some(lrls.info_json.factorio_version.clone());
+    if let Some(latest_release) = latest_release {
+        result.timestamp = Some(latest_release.released_at.clone().into());
+        result.game_version = Some(latest_release.info_json.factorio_version.clone());
         result.download = Some(ModDownload {
-            official: format!("{}{}", MODPORTAL_URL, lrls.download_url),
+            official: format!("{}{}", MODPORTAL_URL, latest_release.download_url),
             //launcher: format!("{}/{}/{}.zip", LAUNCHER_URL, mod_name, lrls.version),
             launcher: None,
         });
-        result.latest_version = Some(lrls.version.to_string());
+        result.latest_version = Some(latest_release.version.to_string());
     }
     if mod_info.thumbnail != "/assets/.thumb.png" {
         result.thumbnail_url =
             format!("https://mods-data.factorio.com{}", mod_info.thumbnail).into();
     }
+    log::debug!("Resulting mod data: {result:?}");
     Ok(result)
 }
 
@@ -378,22 +405,19 @@ async fn find_mod(ctx: &Context, mod_name: &str) -> Result<String, Box<dyn Error
     if search_response.status() == StatusCode::OK {
         let selector = Selector::parse("h2.mb0").unwrap();
         let document = Html::parse_document(&search_response.text().await?);
-        match document.select(&selector).next() {
-            Some(elem) => {
-                let asel = Selector::parse("a").unwrap();
-                match elem.select(&asel).next() {
-                    Some(mod_link) => match mod_link.value().attr("href") {
-                        Some(link) => Ok(String::from(&link[5..])),
-                        None => Err(ModError::NotFound.into()),
-                    },
-                    None => Err(ModError::NotFound.into()),
+        if let Some(elem) = document.select(&selector).next() {
+            let asel = Selector::parse("a").unwrap();
+            if let Some(mod_link) = elem.select(&asel).next() {
+                if let Some(link) = mod_link.value().attr("href") {
+                    let new_mod_name = String::from(&link[5..]);
+                    log::debug!("Fallback search success: {new_mod_name}");
+                    return Ok(new_mod_name);
                 }
             }
-            None => Err(ModError::NotFound.into()),
         }
-    } else {
-        Err(ModError::NotFound.into())
     }
+    log::error!("Fallback search didn't find results for {mod_name}");
+    Err(ModError::NotFound.into())
 }
 
 #[group]
@@ -402,7 +426,7 @@ async fn find_mod(ctx: &Context, mod_name: &str) -> Result<String, Box<dyn Error
 #[summary("Factorio mods")]
 struct Factorio;
 
-#[derive(Error, Debug)]
+#[derive(Clone, Copy, Error, Debug)]
 pub enum ModError {
     #[error("Mod not found")]
     NotFound,
