@@ -477,7 +477,8 @@ async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result:
 
 #[tokio::main]
 async fn main() {
-    simple_logger::init_with_env().unwrap();
+    //simple_logger::init_with_env().unwrap();
+    tracing_subscriber::fmt::init();
 
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
