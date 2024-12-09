@@ -1,5 +1,7 @@
-use crate::{BanMessageIgnoreList, Handler};
+use std::{sync::Arc, time::Duration};
+
 use serenity::{
+    all::GetMessages,
     framework::standard::{
         macros::{command, group},
         Args, CommandResult,
@@ -7,8 +9,8 @@ use serenity::{
     model::prelude::*,
     prelude::*,
 };
-use std::sync::Arc;
-use std::time::Duration;
+
+use crate::{BanMessageIgnoreList, Handler};
 
 const CLEARCHAT_WAIT_DURATION: Duration = Duration::from_secs(3);
 
@@ -20,11 +22,11 @@ const CLEARCHAT_WAIT_DURATION: Duration = Duration::from_secs(3);
 #[usage("X")]
 #[example("10")]
 async fn clearchat(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let count = args.single::<u64>()?;
+    let count = args.single::<u8>()?;
     msg.delete(&ctx.http).await?;
     let messages = msg
         .channel_id
-        .messages(&ctx.http, |gm| gm.limit(count))
+        .messages(&ctx.http, GetMessages::new().limit(count))
         .await?;
     let deleted_count = messages.len();
     msg.channel_id.delete_messages(&ctx.http, messages).await?;

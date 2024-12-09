@@ -1,6 +1,7 @@
-use serde::{Deserialize, Serialize};
-use serde_repr::{Deserialize_repr, Serialize_repr};
-use serenity::{builder::CreateEmbed, model::prelude::*, prelude::*};
+// TODO: factor out work with DB (even json files) into modules and leave thsi aas a lib of
+// structs
+#[cfg(test)]
+use std::str::FromStr;
 use std::{
     collections::HashMap,
     error::Error,
@@ -10,15 +11,13 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
+
+use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
+use serenity::{builder::CreateEmbed, model::prelude::*, prelude::*};
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, EnumIter, EnumString};
 use thiserror::Error;
-
-// TODO: factor out work with DB (even jsonn files) into modules and leave thsi aas a lib of
-// structs
-
-#[cfg(test)]
-use std::str::FromStr;
 
 #[derive(
     Debug, EnumString, AsRefStr, Hash, Eq, PartialEq, Clone, Copy, Deserialize, Serialize, EnumIter,
@@ -122,7 +121,8 @@ impl GuildConfigManager {
                     GuildConfigGetArgs::IdAndContext(id, ctx) => {
                         let guild_cached = id
                             .to_guild_cached(ctx)
-                            .ok_or(GuildConfigError::GuildCacheFailed(id))?;
+                            .ok_or(GuildConfigError::GuildCacheFailed(id))?
+                            .clone();
                         gc_cache.insert(
                             guild_id,
                             Arc::new(RwLock::new(
@@ -203,8 +203,12 @@ pub struct GuildConfig {
 impl GuildConfig {
     /// Create new instance of GuildConfig
     async fn new(guild: &Guild, config_path: &Path) -> Result<Self, Box<dyn Error + Send + Sync>> {
-        let guild_config_data =
-            GuildConfigData::new(guild.system_channel_id.unwrap_or(ChannelId(0)));
+        let guild_config_data = GuildConfigData::new(
+            guild
+                .default_channel_guaranteed()
+                .ok_or(Box::<dyn Error + Send + Sync>::from("No default channel"))?
+                .into(),
+        );
         let path = config_path.join(format!("guild_{}.json", guild.id));
         let result = Self::from_data(guild_config_data, guild.id, path);
         result.write().await?;
@@ -358,11 +362,7 @@ impl GuildConfig {
     }
 
     /// Create an embed with what parameters are set in this GuildConfig
-    pub fn display_embed<'a>(
-        &self,
-        data: GuildConfigData,
-        embed: &'a mut CreateEmbed,
-    ) -> &'a mut CreateEmbed {
+    pub fn display_embed(&self, data: GuildConfigData, embed: CreateEmbed) -> CreateEmbed {
         data.display_embed(embed.title(format!("Config for guild {}", self.guild_id)))
     }
 }
@@ -395,7 +395,7 @@ impl GuildConfigData {
         }
     }
 
-    fn display_embed<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+    fn display_embed(&self, embed: CreateEmbed) -> CreateEmbed {
         embed
             .field(
                 "Message link lookup",

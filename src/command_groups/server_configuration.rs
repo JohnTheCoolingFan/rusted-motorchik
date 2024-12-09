@@ -1,5 +1,7 @@
-use crate::guild_config::{CommandDisability, GuildConfigManager, InfoChannelType};
+use std::str::FromStr;
+
 use serenity::{
+    all::{CreateEmbed, CreateMessage},
     framework::standard::{
         macros::{command, group},
         ArgError, Args, CommandResult,
@@ -7,8 +9,9 @@ use serenity::{
     model::prelude::*,
     prelude::*,
 };
-use std::str::FromStr;
 use thiserror::Error;
+
+use crate::guild_config::{CommandDisability, GuildConfigManager, InfoChannelType};
 
 /// Enable (globally for the entire server/guild) specified command
 #[command("enable")]
@@ -209,8 +212,8 @@ async fn set_ic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 #[commands(enable_ic, disable_ic, set_ic)]
 struct InfoChannelsCommands;
 
-/// Set default roles that are given to newcomers. Waits until server moderation requirements are met and member has read the rules.
-/// If no roles are specified, the list will be cleared.
+/// Set default roles that are given to newcomers. Waits until server moderation requirements are
+/// met and member has read the rules. If no roles are specified, the list will be cleared.
 #[command]
 #[usage("[role, role...]")]
 #[example("@Newbie")]
@@ -261,9 +264,11 @@ async fn show_config(ctx: &Context, msg: &Message, _: Args) -> CommandResult {
     let guild_config_read = guild_config.read().await;
     let gc_data = guild_config_read.to_data().await;
     msg.channel_id
-        .send_message(ctx, |cm| {
-            cm.embed(|e| guild_config_read.display_embed(gc_data, e))
-        })
+        .send_message(
+            ctx,
+            CreateMessage::new()
+                .embed(guild_config_read.display_embed(gc_data, CreateEmbed::new())),
+        )
         .await?;
     Ok(())
 }

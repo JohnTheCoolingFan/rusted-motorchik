@@ -1,6 +1,7 @@
 use std::ops::Deref;
 
 use serenity::{
+    all::EditMessage,
     client::Context,
     framework::standard::{
         macros::{command, group},
@@ -69,9 +70,10 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
             _ => time_diff.num_milliseconds() as f64,
         }
     };
-    pong.edit(&ctx.http, |m| {
-        m.content(format!("pong!\nTime delta is {time_diff_ms} ms"))
-    })
+    pong.edit(
+        &ctx.http,
+        EditMessage::new().content(format!("pong!\nTime delta is {time_diff_ms} ms")),
+    )
     .await?;
     Ok(())
 }

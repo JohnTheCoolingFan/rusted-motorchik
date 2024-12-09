@@ -12,10 +12,12 @@ use serenity::{
 
 #[command]
 async fn say(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    msg.delete(&ctx.http).await?;
+    log::info!("AAAA {}", args.current().unwrap());
+    args.quoted();
     args.single::<ChannelId>()?
         .say(&ctx.http, args.trimmed().quoted().single::<String>()?)
         .await?;
+    msg.delete(&ctx.http).await?;
     Ok(())
 }
 

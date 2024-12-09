@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 mod command_groups;
 mod guild_config;
 
@@ -17,6 +19,10 @@ use guild_config::{GuildConfigManager, InfoChannelType};
 use once_cell::sync::OnceCell;
 use regex::Regex;
 use serenity::{
+    all::{
+        standard::Configuration, CreateAllowedMentions, CreateEmbed, CreateEmbedAuthor,
+        CreateEmbedFooter, CreateMessage,
+    },
     async_trait,
     client::{Client, Context, EventHandler},
     framework::standard::{
@@ -114,7 +120,7 @@ impl Handler {
         ban_reason: Option<String>,
     ) {
         let gc_manager = Arc::clone(ctx.data.read().await.get::<GuildConfigManager>().unwrap());
-        let guild_cached = guild_id.to_guild_cached(ctx).unwrap();
+        let guild_cached = guild_id.to_guild_cached(ctx).unwrap().clone();
         if let Ok(guild_config) = gc_manager.get_cached_guild_config(&guild_cached).await {
             let log_ic_data_arc = guild_config
                 .read()
@@ -123,7 +129,7 @@ impl Handler {
             let log_ic_data = log_ic_data_arc.read().await;
             if log_ic_data.enabled {
                 let channel = log_ic_data.channel_id;
-                if let Ok(bans) = guild_cached.bans(ctx).await {
+                if let Ok(bans) = guild_cached.bans(ctx, None, None).await {
                     for ban in bans {
                         if &ban.user == user {
                             let reason = ban_reason.unwrap_or_else(|| {
@@ -161,22 +167,30 @@ impl EventHandler for Handler {
 
     // Redirect DMs to author
     async fn message(&self, ctx: Context, msg: Message) {
-        if !msg.is_own(&ctx) {
+        if msg.author != **ctx.cache.current_user() {
             // DM/PM redirect
-            if msg.is_private() {
+            if msg.guild_id.is_none() {
                 if let Ok(appinfo) = ctx.http.get_current_application_info().await {
-                    let owner = appinfo.owner;
-                    if let Err(why) = owner
-                        .dm(&ctx.http, |m| {
-                            m.content(format!(
-                                "I have received a message from {}:\n{}",
-                                msg.author.tag(),
-                                msg.content
-                            ))
-                        })
-                        .await
-                    {
-                        log::error!("Failed to redirect message: {why}")
+                    if let Some(owner) = appinfo.owner {
+                        if let Err(why) = owner
+                            .dm(
+                                &ctx.http,
+                                CreateMessage::new().content(format!(
+                                    "I have received a message from {}:\n{}",
+                                    msg.author.tag(),
+                                    msg.content
+                                )),
+                            )
+                            .await
+                        {
+                            log::error!("Failed to redirect message: {why}")
+                        }
+                    } else {
+                        log::info!(
+                            "Received dm message from {}:\n{}",
+                            msg.author.tag(),
+                            msg.content
+                        );
                     }
                 }
             } else {
@@ -203,27 +217,32 @@ impl EventHandler for Handler {
                                     {
                                         if let Err(why) = msg
                                             .channel_id
-                                            .send_message(&ctx, |cm| {
-                                                cm.reference_message(&msg)
-                                                    .embed(|e| {
-                                                        e.author(|cea| {
-                                                            cea.icon_url(
-                                                                message
-                                                                    .author
-                                                                    .avatar_url()
-                                                                    .unwrap_or_default(),
+                                            .send_message(
+                                                &ctx,
+                                                CreateMessage::new()
+                                                    .reference_message(&msg)
+                                                    .embed(
+                                                        CreateEmbed::new()
+                                                            .author(
+                                                                CreateEmbedAuthor::new(
+                                                                    &message.author.name,
+                                                                )
+                                                                .icon_url(
+                                                                    message
+                                                                        .author
+                                                                        .avatar_url()
+                                                                        .unwrap_or_default(),
+                                                                )
+                                                                .url(link),
                                                             )
-                                                            .name(message.author.name)
-                                                            .url(link)
-                                                        })
-                                                        .description(message.content)
-                                                    })
-                                                    .allowed_mentions(|cam| {
-                                                        cam.empty_users()
-                                                            .empty_roles()
-                                                            .empty_parse()
-                                                    })
-                                            })
+                                                            .description(message.content),
+                                                    )
+                                                    .allowed_mentions(
+                                                        CreateAllowedMentions::new()
+                                                            .empty_users()
+                                                            .empty_roles(),
+                                                    ),
+                                            )
                                             .await
                                         {
                                             log::error!("Failed to reply: {why}");
@@ -270,8 +289,7 @@ impl EventHandler for Handler {
                     let gc_manager =
                         Arc::clone(ctx1.data.read().await.get::<GuildConfigManager>().unwrap());
                     for item in &*queue.read().await {
-                        if let Ok(mut member) = item.0.member(Arc::clone(&ctx1.http), item.1).await
-                        {
+                        if let Ok(member) = item.0.member(Arc::clone(&ctx1.http), item.1).await {
                             if member.pending {
                                 new_queue.push(*item)
                             } else if let Ok(guild_config) =
@@ -321,7 +339,7 @@ impl EventHandler for Handler {
     }
 
     // Member joined a guild
-    async fn guild_member_addition(&self, ctx: Context, mut new_member: Member) {
+    async fn guild_member_addition(&self, ctx: Context, new_member: Member) {
         let guild_id = new_member.guild_id;
         if let Ok(guild_config) =
             GuildConfigManager::get_guild_config_from_ctx(&ctx, guild_id).await
@@ -444,16 +462,14 @@ async fn before(ctx: &Context, msg: &Message, cmd_name: &str) -> bool {
 async fn after(ctx: &Context, msg: &Message, command_name: &str, command_result: CommandResult) {
     if let Err(why) = command_result {
         log::error!("Command '{command_name}' returned error {why}");
-        if let Err(why_echo) = msg.channel_id.send_message(&ctx.http, |m| {
-            m.add_embed(|e| {
-                e.color(ERROR_EMBED_COLOR)
+        if let Err(why_echo) = msg.channel_id.send_message(&ctx.http, CreateMessage::new()
+            .add_embed(CreateEmbed::new()
+                .color(ERROR_EMBED_COLOR)
                     .title("Error executing a command")
                     .description(format!("Error occured while running command `{command_name}`:\n{why}"))
-                    .footer(|f| {
-                        f.text("Please contact bot author on github/gitlab/discord, see `source` command")
-                    })
-            })
-        }).await {
+                    .footer(CreateEmbedFooter::new("Please contact bot author on github/gitlab/discord, see `source` command"))
+            )
+        ).await {
             log::error!("Error sending command error report: {why_echo}");
         }
     }
@@ -471,8 +487,14 @@ async fn main() {
         Ok(info) => {
             let mut owners = HashSet::new();
             match info.team {
-                Some(team) => owners.insert(team.owner_user_id),
-                _ => owners.insert(info.owner.id),
+                Some(team) => {
+                    owners.insert(team.owner_user_id);
+                }
+                _ => {
+                    if let Some(owner) = info.owner {
+                        owners.insert(owner.id);
+                    }
+                }
             };
             match http.get_current_user().await {
                 Ok(bot_id) => (owners, bot_id.id),
@@ -483,12 +505,6 @@ async fn main() {
     };
 
     let framework = StandardFramework::new()
-        .configure(|c| {
-            c.on_mention(Some(bot_id))
-                .prefix(COMMAND_PREFIX)
-                .delimiters(vec![", ", ","])
-                .owners(owners)
-        })
         .before(before)
         .after(after)
         .help(&MY_HELP)
@@ -499,6 +515,14 @@ async fn main() {
         .group(&SERVERCONFIGURATION_GROUP)
         .group(&SERVICETOOLS_GROUP)
         .group(&TESTCOMMANDS_GROUP);
+
+    framework.configure(
+        Configuration::new()
+            .on_mention(Some(bot_id))
+            .prefix(COMMAND_PREFIX)
+            .delimiters(vec![", ", ","])
+            .owners(owners),
+    );
 
     let mut client = Client::builder(&token, GatewayIntents::all())
         .event_handler(Handler {

@@ -1,5 +1,8 @@
+use std::env;
+
 use chrono::offset::Utc;
 use serenity::{
+    all::{CreateEmbed, CreateMessage},
     client::Context,
     framework::standard::{
         macros::{command, group},
@@ -7,7 +10,6 @@ use serenity::{
     },
     model::channel::Message,
 };
-use std::env;
 use sysinfo::SystemExt;
 
 use crate::StartTime;
@@ -50,9 +52,11 @@ async fn info(ctx: &Context, msg: &Message) -> CommandResult {
     let start_time = data_lock.get::<StartTime>().unwrap();
     let dur = Utc::now() - *start_time.as_ref();
     msg.channel_id
-        .send_message(&ctx.http, |m| {
-            m.embed(|e| {
-                e.title("Host info")
+        .send_message(
+            &ctx.http,
+            CreateMessage::new().embed(
+                CreateEmbed::new()
+                    .title("Host info")
                     .timestamp(Utc::now())
                     .color((47, 137, 197))
                     .field(
@@ -83,7 +87,7 @@ async fn info(ctx: &Context, msg: &Message) -> CommandResult {
                         ),
                         true,
                     )
-                    .field("Build git commit hash", env!("GIT_HASH"), true)
+                    .field("Build git commit hash", env!("GIT_HASH"), true),
                 /* TODO
                 .field("Host uptime", match psutil::host::uptime() {
                     Ok(dur) => match chrono::Duration::from_std(dur) {
@@ -98,13 +102,14 @@ async fn info(ctx: &Context, msg: &Message) -> CommandResult {
                     _ => "Unknown".into()
                 }, true)
                 */
-            })
-        })
+            ),
+        )
         .await?;
     Ok(())
 }
 
-// I'm not bringing "f***discord" command because it's about python and not quite relevant anymore...
+// I'm not bringing "f***discord" command because it's about python and not quite relevant
+// anymore...
 /// Nothing of much interest
 #[group]
 #[commands(github, gitlab, source, info)]

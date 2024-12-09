@@ -5,6 +5,7 @@ use scraper::{Html, Selector};
 use semver::Version;
 use serde::Deserialize;
 use serenity::{
+    all::{CreateEmbedFooter, CreateMessage, EditMessage, GetMessages},
     builder::CreateEmbed,
     framework::standard::{
         macros::{command, group},
@@ -81,11 +82,11 @@ impl ModData {
         }
     }
 
-    pub fn result_to_embed<'a>(
-        embed: &'a mut CreateEmbed,
+    pub fn result_to_embed(
+        embed: CreateEmbed,
         mod_data: Result<ModData, Box<dyn Error + Send + Sync>>,
         mod_name: &str,
-    ) -> &'a mut CreateEmbed {
+    ) -> CreateEmbed {
         match mod_data {
             Ok(data) => construct_mod_embed(embed, data),
             Err(e) => {
@@ -210,9 +211,14 @@ async fn process_mod(
     log::info!("Processing mod {mod_name}");
     let mod_data = get_mod_info(ctx, mod_name).await;
     Ok(channel
-        .send_message(&ctx.http, |m| {
-            m.embed(|e| ModData::result_to_embed(e, mod_data, mod_name))
-        })
+        .send_message(
+            &ctx.http,
+            CreateMessage::new().embed(ModData::result_to_embed(
+                CreateEmbed::new(),
+                mod_data,
+                mod_name,
+            )),
+        )
         .await?
         .id)
 }
@@ -220,10 +226,16 @@ async fn process_mod(
 pub async fn reply_process_mod(ctx: &Context, msg: &Message, mod_name: &str) -> CommandResult {
     let mod_data = get_mod_info(ctx, mod_name).await;
     msg.channel_id
-        .send_message(ctx, |cm| {
-            cm.reference_message(msg)
-                .embed(|ce| ModData::result_to_embed(ce, mod_data, mod_name))
-        })
+        .send_message(
+            ctx,
+            CreateMessage::new()
+                .reference_message(msg)
+                .embed(ModData::result_to_embed(
+                    CreateEmbed::new(),
+                    mod_data,
+                    mod_name,
+                )),
+        )
         .await?;
     Ok(())
 }
@@ -241,9 +253,14 @@ pub async fn edit_update_mod_list(
         let mut message = Message::convert(ctx, Some(guild), Some(channel), &message_id).await?;
         let mod_data = get_mod_info(ctx, mod_name).await;
         message
-            .edit(&ctx.http, |ed| {
-                ed.embed(|e| ModData::result_to_embed(e, mod_data, mod_name))
-            })
+            .edit(
+                &ctx.http,
+                EditMessage::new().embed(ModData::result_to_embed(
+                    CreateEmbed::new(),
+                    mod_data,
+                    mod_name,
+                )),
+            )
             .await?;
     }
     Ok(())
@@ -267,7 +284,7 @@ pub async fn update_mod_list(
         if mod_list_messages_arc.read().await.is_empty() {
             log::info!("Empty list of messages");
             let messages = channel
-                .messages(ctx, |gm| gm.limit(MOD_LIST.len() as u64))
+                .messages(ctx, GetMessages::new().limit(MOD_LIST.len() as u8))
                 .await?;
             channel.delete_messages(ctx, messages).await?;
             match scheduled_modlist(ctx, channel, &MOD_LIST).await {
@@ -289,13 +306,14 @@ pub async fn update_mod_list(
     Ok(())
 }
 
-fn construct_mod_embed(e: &mut CreateEmbed, data: ModData) -> &mut CreateEmbed {
-    e.title(data.title)
+fn construct_mod_embed(mut e: CreateEmbed, data: ModData) -> CreateEmbed {
+    e = e
+        .title(data.title)
         .description(data.description)
         .url(data.url)
         .color(data.color);
     if let Some(game_version) = data.game_version {
-        e.field("Game version", game_version, true);
+        e = e.field("Game version", game_version, true);
     }
     if let Some(download) = data.download {
         let download_links = if let Some(launcher_download_url) = &download.launcher {
@@ -306,27 +324,29 @@ fn construct_mod_embed(e: &mut CreateEmbed, data: ModData) -> &mut CreateEmbed {
         } else {
             format!("[From official mod portal]({})", download.official)
         };
-        e.field("Download link", download_links, true);
+        e = e.field("Download link", download_links, true);
     }
     if let Some(latest_version) = data.latest_version {
-        e.field("Latest version", latest_version, true);
+        e = e.field("Latest version", latest_version, true);
     }
-    e.field(
-        "Recent downloads",
-        format!("{} times", data.downloads_count),
-        true,
-    );
-    e.field(
-        "Author",
-        format!("[{0}](https://mods.factorio.com/user/{0})", data.author),
-        true,
-    );
+    e = e
+        .field(
+            "Recent downloads",
+            format!("{} times", data.downloads_count),
+            true,
+        )
+        .field(
+            "Author",
+            format!("[{0}](https://mods.factorio.com/user/{0})", data.author),
+            true,
+        );
     if let Some(timestamp) = data.timestamp {
-        e.timestamp(timestamp)
-            .footer(|f| f.text("Latest version was released at:"));
+        e = e
+            .timestamp(timestamp)
+            .footer(CreateEmbedFooter::new("Latest version was released at:"));
     }
     if let Some(thumbnail_url) = data.thumbnail_url {
-        e.thumbnail(thumbnail_url);
+        e = e.thumbnail(thumbnail_url);
     }
     e
 }
@@ -378,7 +398,7 @@ async fn parse_mod_data(
         mod_info.owner,
     );
     if let Some(latest_release) = latest_release {
-        result.timestamp = Some(latest_release.released_at.clone().into());
+        result.timestamp = Some(Timestamp::parse(&latest_release.released_at).unwrap());
         result.game_version = Some(latest_release.info_json.factorio_version.clone());
         result.download = Some(ModDownload {
             official: format!("{}{}", MODPORTAL_URL, latest_release.download_url),
