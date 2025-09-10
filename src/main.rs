@@ -7,8 +7,8 @@ use std::{
     collections::HashSet,
     env,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
     time::Duration,
 };
@@ -20,15 +20,14 @@ use once_cell::sync::OnceCell;
 use regex::Regex;
 use serenity::{
     all::{
-        standard::Configuration, CreateAllowedMentions, CreateEmbed, CreateEmbedAuthor,
-        CreateEmbedFooter, CreateMessage,
+        CreateAllowedMentions, CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateMessage,
+        standard::Configuration,
     },
     async_trait,
     client::{Client, Context, EventHandler},
     framework::standard::{
-        help_commands,
+        Args, CommandGroup, CommandResult, HelpOptions, StandardFramework, help_commands,
         macros::{help, hook},
-        Args, CommandGroup, CommandResult, HelpOptions, StandardFramework,
     },
     http::Http,
     model::{channel::Message, gateway::Ready, prelude::*},
@@ -405,7 +404,9 @@ impl EventHandler for Handler {
             if welcome_ic_data.enabled {
                 let channel = welcome_ic_data.channel_id;
                 if let Err(why) = channel.say(&ctx, format!("Goodbye, {}", user.name)).await {
-                    log::error!("Failed to say goodbye to user {user} who left guild {guild_id} due to a following error: {why}");
+                    log::error!(
+                        "Failed to say goodbye to user {user} who left guild {guild_id} due to a following error: {why}"
+                    );
                 }
             }
         }
@@ -540,7 +541,12 @@ async fn main() {
         let mut client_data = client.data.write().await;
         client_data.insert::<RoleQueue>(Arc::new(RwLock::new(Vec::new())));
         client_data.insert::<GuildConfigManager>(Arc::new(GuildConfigManager::new(&config_path)));
-        client_data.insert::<FactorioReqwestClient>(reqwest::Client::new());
+        client_data.insert::<FactorioReqwestClient>(
+            reqwest::Client::builder()
+                .connect_timeout(Duration::from_secs(10))
+                .build()
+                .unwrap(),
+        );
         client_data.insert::<StartTime>(Arc::new(Utc::now()));
     }
 
