@@ -5,12 +5,11 @@ use serenity::{
     all::{CreateEmbed, CreateMessage},
     client::Context,
     framework::standard::{
-        macros::{command, group},
         CommandResult,
+        macros::{command, group},
     },
     model::channel::Message,
 };
-use sysinfo::SystemExt;
 
 use crate::StartTime;
 
@@ -47,7 +46,6 @@ async fn source(ctx: &Context, msg: &Message) -> CommandResult {
 /// Info about host on which this bot is currently running
 #[command]
 async fn info(ctx: &Context, msg: &Message) -> CommandResult {
-    let system_info = sysinfo::System::default();
     let data_lock = ctx.data.read().await;
     let start_time = data_lock.get::<StartTime>().unwrap();
     let dur = Utc::now() - *start_time.as_ref();
@@ -61,7 +59,7 @@ async fn info(ctx: &Context, msg: &Message) -> CommandResult {
                     .color((47, 137, 197))
                     .field(
                         "Hostname",
-                        match system_info.host_name() {
+                        match sysinfo::System::host_name() {
                             Some(host) => host,
                             _ => "Unknown".into(),
                         },
@@ -69,7 +67,7 @@ async fn info(ctx: &Context, msg: &Message) -> CommandResult {
                     )
                     .field(
                         "Platform",
-                        match system_info.long_os_version() {
+                        match sysinfo::System::long_os_version() {
                             Some(platform) => platform,
                             _ => "unknwon".into(),
                         },
